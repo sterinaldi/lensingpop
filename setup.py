@@ -29,7 +29,7 @@ ext_modules=[
                        )
              ]
              
-ext_modules = cythonize(ext_modules)
+ext_modules = cythonize(ext_modules, compiler_directives={'language_level' : "3"})
 setup(
       name = 'lensingpop/models',
       ext_modules = cythonize(ext_modules, language_level = "3"),
