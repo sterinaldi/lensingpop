@@ -2,8 +2,5 @@
 
 To generate the mock data in the parent folder, run the following:
 
-1. `command 1`
-2. `command 2`
-3. (...)
-
-@Damon: Can you fill? Thanks! :)
+1. `python MockDataMass.py --N 1000 --Nsample 500`,
+where `N` is the number of events and `Nsample` is the number of posterior samples per event
