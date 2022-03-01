@@ -230,7 +230,8 @@ m1[:N_delta], m2[:N_delta] = delta_m1, delta_m2
 
 md = mass_distribution(**PP_pars)
 m1[N_delta:], m2[N_delta:] = md.sample(N-N_delta).T
-m1, m2 = m1[np.random.permutation(N)], m2[np.random.permutation(N)]
+order = np.random.permutation(N)
+m1, m2 = m1[order], m2[order]
 for i in range(0, N):
     
     # Draw the redshifts and convert to luminosity distances
