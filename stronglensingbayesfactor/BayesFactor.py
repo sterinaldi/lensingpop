@@ -152,5 +152,44 @@ print("Bayes Factor = {:.2f} \n".format(Bayes) )
 
 print("The normalization of Bayes factor is still missing. Working on it.")
 
+# result 
+"""
+we have 1986 events with 1000 posterior sample each.
+unlensed example
+event1 approx: m1 = 50.94, m2 = 24.95.
+
+Approx. population likelihood for event1 =  [0.00392994] 
+
+event2 approx: m1 = 41.13, m2 = 36.07.
+
+Approx. population likelihood for event2 =  [0.00107018] 
+
+Bayes Factor = 0.00 
+
+lensed example 1 ----------------------------
+
+event1 approx: m1 = 50.94, m2 = 24.95.
+
+Approx. population likelihood for event1 =  [0.00392994] 
+
+event2 approx: m1 = 50.94, m2 = 24.95.
+
+Approx. population likelihood for event2 =  [0.00392994] 
+
+Bayes Factor = 601.72 
+
+lensed example 2---------------------------
+
+event1 approx: m1 = 41.13, m2 = 36.07.
+
+Approx. population likelihood for event1 =  [0.00107018] 
+
+event2 approx: m1 = 41.13, m2 = 36.07.
+
+Approx. population likelihood for event2 =  [0.00107018] 
+
+Bayes Factor = 210.86 
+"""
+
 
 
