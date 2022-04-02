@@ -161,7 +161,7 @@ class mass_distribution():
 
         return self.model.joint_prob(m1,m2)
 
-def redshift_pdf(zmin=0, zmax=2.3 ,kappa = 1.0 ,z, norm):
+def redshift_pdf(zmin=0, zmax=15.0 ,kappa = 1.0 ,z, norm):
     #p_z = (1.0+z)**(kappa-1.0)*cosmo.differential_comoving_volume(z).to(u.Gpc**3/u.sr).value / norm
     p_z = (1.0+z)**(kappa-1.0)*LuminosityDistance(z) / norm
     return p_z

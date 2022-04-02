@@ -8,16 +8,20 @@ with open("gwdet_default_interpolator", "rb") as f:
 
 kappa = 1.0
 zmin = 0 
-zmax = 2.3
+zmax = 15.0
 norm = integrate.quad(lambda x: (1+x)**(kappa-1)*cosmo.differential_comoving_volume(x).to(u.Gpc**3/u.sr).value, zmin, zmax)[0]
 print(norm)
 
 # make a redshift-luminosity distance interpolator
-zmin = 1e-7
-zmax = 15
 z_grid = np.geomspace(zmin,zmax, 400)
 z_eval = interp1d(LuminosityDistance(z_grid), z_grid)
 
+################# Magnification factor mu ######################
+mu_bins = np.linspace(0,15,200)
+mu_pdf = powerlaw_pdf(mu_bins, -3, 1, 13)
+
+lm_min = LuminosityDistance(zmin)
+lm_max = LuminosityDistance(zmax)
 
 ## parameters for Power-law plus peak model
 lambda_d = 0.10
@@ -102,20 +106,6 @@ m2_posterior = data['m2_posterior'][:50]
 
 print('we have {:d} events with {:d} posterior sample each.'.format(m1_posterior.shape[0],m1_posterior.shape[1]))
 
-#pmass = DensityEstimator(np.array([m1src,m2src]).T)
-
-########## computation of Bayes factor based on the overlapping of parameters
-
-mu_bins = np.linspace(0,15,200)
-mu_pdf = powerlaw_pdf(mu_bins, -3, 1, 13)
-
-zmin = 1e-4
-zmax = 15
-z_grid = np.geomspace(zmin,zmax, 400)
-z_eval = interp1d(LuminosityDistance(z_grid), z_grid)
-
-lm_min = LuminosityDistance(zmin)
-lm_max = LuminosityDistance(zmax)
 
 
 
@@ -123,8 +113,8 @@ alpha = Selection_unlensed(pmass,pz)
 print(alpha)
 beta = Selection_lensed(pmass,Nzsample=100000)
 print(beta)
-
-def BayesFactor(event1,event2,z,pmass,pz,pop_prior,Nsample=int(1e6)):
+########## computation of Bayes factor based on the overlapping of parameters
+def BayesFactor(event1,event2,z,pmass,pz,Nsample=int(1e6)):
     p1 = DensityEstimator(event1)
     p2 = DensityEstimator(event2)
 
@@ -135,7 +125,7 @@ def BayesFactor(event1,event2,z,pmass,pz,pop_prior,Nsample=int(1e6)):
     pdet_p2 = fpdet(sample)
     #### this population prior is reconstruncted with selection effect  #### 
 
-    population_prior = pop_prior.pdf(np.array([sample[0],sample[1],np.repeat(z,Nsample)]))
+    population_prior = pmass.pdf(np.array([sample[0],sample[1]]))*pz.pdf(z)
 
     MCsample_mean = np.mean(probability_event1*pdet_p2 /population_prior)
     
