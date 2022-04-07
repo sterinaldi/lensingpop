@@ -44,8 +44,6 @@ for i in range(snr.size):
     SNR_obs[i] = snr[i] + TruncNormSampler( -snr[i],np.inf, 0.0, 1.0, 1)
 
 
-
-
 ################## Compute chrip mass and symmetry ratio ##################
 Mz = (1+ redshift) * (m1*m2) ** (3./5.) / (m1+m2)** (1./5.)  
 sym_mass_ratio = (m1*m2)  / (m1+m2)** 2  
@@ -56,7 +54,8 @@ m2_posterior = np.zeros((Mz.size,Npos))
 print('generating posterior')
 for i in range(0,Mz.size):
     ################## chrip mass noise ##################
-    Mz_obs = Mz[i] * np.exp( np.random.normal(0, sigma_mass / SNR_obs[i], Npos) )
+    Mz_center = Mz[i] * np.exp( np.random.normal(0, sigma_mass / SNR_obs[i], 1) )
+    Mz_obs = Mz_center * np.exp( np.random.normal(0, sigma_mass / SNR_obs[i], Npos) )
 
     ################## generate symmetry ratio noise by using truncated normal distribution ##################
     symratio_obs = TruncNormSampler( 0.0, 0.25, sym_mass_ratio[i], sigma_symratio / SNR_obs[i], Npos)
