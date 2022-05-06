@@ -35,8 +35,8 @@ Appendix A of https://iopscience.iop.org/article/10.3847/2041-8213/ab77c9/pdf
 """
 ################## Parameters ##################
 SNR_threshold = 8
-sigma_mass = 0.008 * SNR_threshold
-sigma_symratio = 0.022 
+sigma_mass = 0.08 * SNR_threshold
+sigma_symratio = 0.022 * SNR_threshold
 sigma_theta = 0.21 * SNR_threshold
 ################## Generate Gaussian noise for SNR ##################
 SNR_obs = np.zeros(snr.shape)
