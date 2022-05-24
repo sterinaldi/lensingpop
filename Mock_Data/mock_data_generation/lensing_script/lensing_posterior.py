@@ -123,7 +123,7 @@ for i in range(m1.size):
     ################## chrip mass noise ##################
     t1 = time.time()
     m1p1[i], m2p1[i], zp1[i] = measurement_uncertainty(Mc[i], sym_mass_ratio[i], dl1[i], zeff1[i], snr1[i], snr_obs1[i], Npos)
-    m1p2[i], m2p2[i], zp2[i] = measurement_uncertainty(Mc[i], sym_mass_ratio[i], dl2[i], zeff2[i], snr2[i], snr_obs1[i], Npos)
+    m1p2[i], m2p2[i], zp2[i] = measurement_uncertainty(Mc[i], sym_mass_ratio[i], dl2[i], zeff2[i], snr2[i], snr_obs2[i], Npos)
     
     print(time.time()-t1)
 np.savez(rdir+'/lensed_posterior.npz',m1p1 = m1p1,m1p2= m1p2,m2p1 = m2p1,m2p2 = m2p2,zp1 = zp1,zp2 = zp2)
