@@ -2,12 +2,20 @@
 
 import dill
 import numpy as np
-
+import os 
 np.random.seed(0)
-rdir = '/Users/damon/desktop/lensingpop/'
+import os 
+import sys
+cdir = os.path.dirname(sys.path[0])
 
+import argparse
+parser = argparse.ArgumentParser(description='Generate population and posterior samples.')
+parser.add_argument('--N',type=int,help='number of events in the catalog',default=1000000)
+parser.add_argument('--p_prior',type=str,help='choose of population prior',default='ppd')
 
-method = 'pp'
+args = parser.parse_args()
+N = int(args.N) # Sunber of events 
+method = args.p_prior
 
 selection = True 
 # Load detectability function 
@@ -16,11 +24,11 @@ if selection:
         detectability = dill.load(f)
 
 # Load image 2 
-with open(rdir+'/Mock_Data/lensed_data/l1_psm3.pkl', 'rb') as f:
+with open(rdir+'/Mock_Data/lensed_data/l1_ps{:.0f}.pkl'.format(N), 'rb') as f:
     LensedEvent1_List = dill.load(f)
 
 # Load image 2 
-with open(rdir+'/Mock_Data/lensed_data/l2_psm3.pkl', 'rb') as f:
+with open(rdir+'/Mock_Data/lensed_data/l2_ps{:.0f}.pkl'.format(N), 'rb') as f:
     LensedEvent2_List = dill.load(f)
 
 
@@ -31,32 +39,44 @@ with open(rdir+'/Mock_Data/priors/'+filename+'.pkl', 'rb') as f:
     population_prob = dill.load(f)
 
 
-bayes = np.zeros(1986)
+def blu(event1_post,event2_post, Nmc):
+    Nmc = int(Nmc)
+    sample = event1_post.rvs(Nmc)
+    # evaluate event2 posterior on event1 samples
+    event2_pdf = event2_post.pdf(sample)
+    # evaluate population probablity on event1 samples
+    pop = population_prob.pdf(sample)
+    if selection:
+        pdet = detectability(sample)
+        blu = np.mean(event2_pdf[pop>0] * pdet[pop>0] / pop[pop>0])
+    else:
+        blu = np.mean(event2_pdf[pop>0] / pop[pop>0])
+    return blu
+
+bayes = np.zeros(len(LensedEvent1_List))
 
 
 Nmc = int(1e6)
 # Compute Blu for each lensed pair
 
-for i in range(bayes.size):
-    event1_posterior = LensedEvent1_List[i]
-    event2_posterior = LensedEvent2_List[i]
-    # perform importance sampling
-    print(i) 
-    # take samples from event 1 
-    sample = event1_posterior.sample_from_dpgmm(Nmc)
-    # evaluate event2 posterior on event1 samples
-    event2_pdf = event2_posterior.evaluate_mixture(sample)
-    # evaluate population probablity on event1 samples
-    pop = population_prob.evaluate_mixture(sample)
-    if selection:
-        pdet = detectability(sample)
-        bayes[i]=np.mean(event2_pdf[pop>0] * pdet[pop>0] / pop[pop>0])
-    else:
-        bayes[i]=np.mean(event2_pdf[pop>0] / pop[pop>0])
+for i in range(len(LensedEvent1_List)):
+    print(i+1,'-th lensed pair calculating...')
+    bayes[i] = blu(LensedEvent1_List[i], LensedEvent2_List[i],1e6)
+    print('BLU = ', bayes[i])
 
 
-        
+
+	
 if selection:
-    np.savez(rdir+'/stronglensingbayesfactor/result_data/'+filename+'_selection'+'.npz',bayesfactor=bayes)
+    save_path = rdir+'stronglensingbayesfactor/result_data/'
+    filename +='_selection.npz'
 else:
-    np.savez(rdir+'/stronglensingbayesfactor/result_data/'+filename+'.npz',bayesfactor=bayes)
+    save_path = rdir+'stronglensingbayesfactor/result_data/'
+    filename += '.npz'
+if not os.path.exists(save_path):
+    os.makedirs(save_path)
+
+
+np.savez(save_path + filename,bayesfactor=bayes)
+
+print('BLU result is saved at ' + save_path + filename)

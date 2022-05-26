@@ -2,19 +2,26 @@
 from figaro.mixture import DPGMM 
 import numpy as np
 import dill
-
+import os 
+import sys
+cdir = os.path.dirname(os.path.dirname(os.path.dirname(sys.path[0])))
 np.random.seed(0)
 
-rdir = '/Users/damon/desktop/lensingpop/'
 
-filename = rdir+'/Mock_Data/lensed_data/lensed_ps1986.npz'
+import argparse
+parser = argparse.ArgumentParser(description='Generate population and posterior samples.')
+parser.add_argument('--N',type=int,help='number of events in the catalog',default=1000000)
+args = parser.parse_args()
+N = int(args.N) # Sunber of events 
+
+filename = cdir + '/Mock_Data/lensed_posterior{:.0f}.npz'.format(N)
 data = np.load(filename)
-l1m1 = data['l1m1']
-l1m2 = data['l1m2']
-l2m1 = data['l2m1']
-l2m2 = data['l2m2']
-l1z = data['l1z']
-l2z = data['l2z']
+l1m1 = data['m1p1']
+l1m2 = data['m2p1']
+l2m1 = data['m1p2']
+l2m2 = data['m2p2']
+l1z = data['zp1']
+l2z = data['zp2']
 
 mmin = min(np.min(l1m1),np.min(l1m2),np.min(l2m1),np.min(l2m2)) - 1.0 
 mmax = max(np.max(l1m1),np.max(l1m2),np.max(l2m1),np.max(l2m2)) + 1.0
@@ -33,25 +40,28 @@ i = 0
 for m1,m2,z in zip(l1m1,l1m2,l1z):
     print(i)
     i+=1
-    mix.density_from_samples(np.array([m1,m2,z]).T)
-    model.append( mix.build_mixture() )
-    mix.initialise()
+    model.append(mix.density_from_samples(np.array([m1,m2,z]).T))
+    #model.append( mix.build_mixture() )
+    #mix.initialise()
 # model[] list contains m1.size models   
 # save
-with open(rdir+'/Mock_Data/lensed_data/l1_psm3.pkl', 'wb') as f:
+with open(cdir+'/Mock_Data/lensed_data/l1_ps{:.0f}.pkl'.format(N), 'wb') as f:
     dill.dump(model, f)
+
+print('dpgmm model for image1 is saved at ' + cdir+'/Mock_Data/lensed_data/l1_ps{:.0f}.pkl'.format(N))
 model = []
 i = 0 
 for m1,m2,z in zip(l2m1,l2m2,l2z):
     print(i)
     i+=1
-    mix.density_from_samples(np.array([m1,m2,z]).T)
-    model.append( mix.build_mixture() )
-    mix.initialise()
+    model.append(mix.density_from_samples(np.array([m1,m2,z]).T))
+    #model.append( mix.build_mixture() )
+    #mix.initialise()
 
 # model[] list contains m1.size models   
 
 # save
-with open(rdir+'/Mock_Data/lensed_data/l2_psm3.pkl', 'wb') as f:
+with open(cdir+'/Mock_Data/lensed_data/l2_ps{:.0f}.pkl'.format(N), 'wb') as f:
     dill.dump(model, f)
-# Models for each events
+#
+print('dpgmm model for image2 is saved at ' + cdir+'/Mock_Data/lensed_data/l2_ps{:.0f}.pkl'.format(N)) 

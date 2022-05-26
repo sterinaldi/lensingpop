@@ -9,15 +9,21 @@ from gwcosmo import priors as p
 from scipy.stats import truncnorm
 from astropy.cosmology import FlatLambdaCDM, z_at_value
 import argparse
-import pickle
+import dill
+import os 
+import sys
+cdir = os.path.dirname(os.path.dirname(sys.path[0]))
+
+
+print(cdir)
 cosmo = FlatLambdaCDM(H0 = 70, Om0 = 0.31)
 np.random.seed(7)
 
 parser = argparse.ArgumentParser(description='Generate population and posterior samples.')
 parser.add_argument('--N',type=int,help='number of population events',default=10000)
+
 args = parser.parse_args()
 N = int(args.N) # nunber of events 
-
 # Here come all the definitions used in this script
 
 def TruncNormSampler(clip_a, clip_b, mean, std, Nsamples):
@@ -203,13 +209,14 @@ antennaPatternValue = AntennaPattern(inclinationValue, rightAscensionValue,
 
 
 ################## Save the data pf intrinsic catalog ########################################################
-filename = "PowerlawplusPeakplusDelta{:.0f}Samples.npz".format(N)
+filename = cdir + "/Mock_Data/PowerlawplusPeakplusDelta{:.0f}Samples.npz".format(N)
 
 np.savez(filename, m1=m1, m2=m2, redshift=redshiftValue, snr=snr, 
         inclinationValue=inclinationValue, polarisationValue=polarisationValue,
         rightAscensionValue=rightAscensionValue, declinationValue=declinationValue,
         GPStimeValue=GPStimeValue)
 
+print('Intrinsic catalog file saved at '+ filename)
 
 t1 = time.time()
 print('Calculation time: {:.2f} s'.format(t1 - start))
@@ -217,21 +224,22 @@ print('Calculation time: {:.2f} s'.format(t1 - start))
 
 ################## applying detectability #########################
 ################## Default setting https://github.com/dgerosa/gwdet ################################
-with open("gwdet_default_interpolator", "rb") as f:
-    pdet = pickle.load(f)
+with open(cdir + "/Mock_Data/gwdet_default_interpolator.pkl", "rb") as f:
+    pdet = dill.load(f)
 
 
 pdet_value = pdet(np.array([m1,m2,redshiftValue]).T)
 randnum = uniform.rvs(size=N)
 index = randnum < pdet_value
-print(index)
+#print(index)
 print("Number of envets in the catalog = ",N, "after selection = ", m1[index].shape)
-filename = "PowerlawplusPeakplusDelta{:.0f}Samples_afterSelection.npz".format(N)
+filename = cdir + "/Mock_Data/PowerlawplusPeakplusDelta{:.0f}Samples_afterSelection.npz".format(N)
 
 ################## Save the data after applying selection effect ########################################################
 np.savez(filename, m1=m1[index], m2=m2[index], redshift=redshiftValue[index], snr=snr[index], 
         inclinationValue=inclinationValue[index], polarisationValue=polarisationValue[index],
         rightAscensionValue=rightAscensionValue[index], declinationValue=declinationValue[index],
         GPStimeValue=GPStimeValue[index])
+print('Observed catalog file saved at '+ filename)
 
 print('Calculation time for pdet: {:.2f} s'.format(time.time() - t1))
