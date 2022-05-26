@@ -20,22 +20,22 @@ method = args.p_prior
 selection = True 
 # Load detectability function 
 if selection:
-    with open(rdir+'/Mock_Data/gwdet_default_interpolator.pkl', 'rb') as f:
+    with open(cdir+'/Mock_Data/gwdet_default_interpolator.pkl', 'rb') as f:
         detectability = dill.load(f)
 
 # Load image 2 
-with open(rdir+'/Mock_Data/lensed_data/l1_ps{:.0f}.pkl'.format(N), 'rb') as f:
+with open(cdir+'/Mock_Data/lensed_data/l1_ps{:.0f}.pkl'.format(N), 'rb') as f:
     LensedEvent1_List = dill.load(f)
 
 # Load image 2 
-with open(rdir+'/Mock_Data/lensed_data/l2_ps{:.0f}.pkl'.format(N), 'rb') as f:
+with open(cdir+'/Mock_Data/lensed_data/l2_ps{:.0f}.pkl'.format(N), 'rb') as f:
     LensedEvent2_List = dill.load(f)
 
 
 # Load population prior
 filename = 'true_prior' if method == 'ppd' else 'wrong_prior' 
 
-with open(rdir+'/Mock_Data/priors/'+filename+'.pkl', 'rb') as f:
+with open(cdir+'/Mock_Data/priors/'+filename+'.pkl', 'rb') as f:
     population_prob = dill.load(f)
 
 
@@ -68,10 +68,10 @@ for i in range(len(LensedEvent1_List)):
 
 	
 if selection:
-    save_path = rdir+'stronglensingbayesfactor/result_data/'
+    save_path = cdir+'stronglensingbayesfactor/result_data/'
     filename +='_selection.npz'
 else:
-    save_path = rdir+'stronglensingbayesfactor/result_data/'
+    save_path = cdir+'stronglensingbayesfactor/result_data/'
     filename += '.npz'
 if not os.path.exists(save_path):
     os.makedirs(save_path)
