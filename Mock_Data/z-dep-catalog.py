@@ -99,12 +99,13 @@ if __name__ == '__main__':
         m1 = np.concatenate([m1,m1])
         m2 = np.concatenate([m2,m2])
         dLValue = np.concatenate([dLValue,dLValue])/np.sqrt(magValue)
-        redshiftValue = np.array([_find_redshift(omega, l) for l in dLValue])
-
+        redshiftValue_l = np.array([_find_redshift(omega, l) for l in dLValue])
+    else:
+        redshiftValue_l = redshiftValue
     ################## Compute the SNR using gwdet package ###############
     ################## Default setting https://github.com/dgerosa/gwdet ################################
     pdet  = gwdet.detectability()
-    snr = pdet.snr(m1,m2,redshiftValue)
+    snr = pdet.snr(m1,m2,redshiftValue_l)
 
 
     ################## Compute the associated angles ###########################
