@@ -35,8 +35,8 @@ class OddsRatio():
             
         #population = self.population
         Poverlap = self.MC_integral_3terms(event1,event2,population, n_draws=self.Nmc,error=self.error)
-        Pastro_event1 = MC_integral(population, event1, n_draws=self.Nmc)
-        Pastro_event2 = MC_integral(population, event2, n_draws=self.Nmc)
+        Pastro_event1 = MC_integral(population, event1, n_draws=self.Nmc,error=self.error)
+        Pastro_event2 = MC_integral(population, event2, n_draws=self.Nmc,error=self.error)
         if self.error:
             #Compute propagation error of BLU =   term1 / (term2 * term3)
             blu = Poverlap[0] / Pastro_event1[0] / Pastro_event2[0]
