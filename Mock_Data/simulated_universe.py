@@ -1,0 +1,79 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from corner import corner
+
+from figaro.utils import rejection_sampler
+from figaro.cosmology import CosmologicalParameters
+
+from tqdm import tqdm
+from numba import jit
+
+# Parameters
+
+# Redshift distribution
+alpha_z = 2.7
+beta_z  = 2.9
+z_p     = 1.9
+z_max   = 10
+
+# Mass distribution
+# PowerLaw
+m_min = 1
+m_max = 100
+alpha = -1.35
+#Peak
+mu_0  = 35
+sigma = 2
+dmudz = 20
+
+# Relative weight
+w_0 = 0.3
+
+# Magnification distribution
+gamma   = -3
+mag_min = 1
+mag_max = 100
+
+# Cosmology
+
+h = 0.674
+om = 0.315
+ol = 0.685
+
+omega = CosmologicalParameters(h, om, ol, -1, 0)
+
+@jit
+def mu(z):
+    return mu_0 + dmudz*(z/z_max)
+@jit
+def norm(m, z):
+    return np.exp(-(m-mu(z))**2/(2*sigma**2))/(np.sqrt(2*np.pi)*sigma)
+@jit
+def redshift_distribution(z):
+    return (1 + (1+z_p)**(-alpha_z-beta_z)) * (1+z)**alpha_z / (1+((1+z)/(1+z_p))**(alpha_z+beta_z))
+@jit
+def weight(z):
+    return w_0*(1+(z/z_max))
+@jit
+def mass_distribution(m, z):
+    return (1-weight(z))*(m**alpha * (1+alpha)/(m_max**(1+alpha) - m_min**(1+alpha))) + weight(z)*norm(m, z)
+@jit
+def magnification_distribution(mag):
+    return (mag**gamma * (1+gamma)/(mag_max**(1+gamma) - mag_min**(1+gamma)))
+
+if __name__ == '__main__':
+
+    n_draws = 10000
+    z = rejection_sampler(n_draws, redshift_distribution, [0,z_max])
+    mag = rejection_sampler(n_draws, magnification_distribution, [mag_min, mag_max])
+    m1 = []
+    m2 = []
+    for zi in tqdm(z, desc = 'm'):
+        masses = rejection_sampler(2, lambda m: mass_distribution(m, zi), [m_min, m_max])
+        m1.append(np.max(masses))
+        m2.append(np.min(masses))
+
+    samples = np.array([m1, m2, z, mag]).T
+
+    c = corner(samples, labels = ['m1', 'm2', 'z', 'mu'])
+    plt.savefig('m1m2z.pdf')
