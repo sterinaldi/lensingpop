@@ -41,6 +41,7 @@ om = 0.315
 ol = 0.685
 
 omega = CosmologicalParameters(h, om, ol, -1, 0)
+vol_max = omega.ComovingVolume(z_max)
 
 @jit
 def mu(z):
@@ -51,6 +52,9 @@ def norm(m, z):
 @jit
 def redshift_distribution(z):
     return (1 + (1+z_p)**(-alpha_z-beta_z)) * (1+z)**alpha_z / (1+((1+z)/(1+z_p))**(alpha_z+beta_z))
+
+def lensed_redshift_distribution(z):
+    return (np.array([omega.ComovingVolume(zi) for zi in z]) / vol_max ) * redshift_distribution(z)
 @jit
 def weight(z):
     return w_0*(1+(z/z_max))
