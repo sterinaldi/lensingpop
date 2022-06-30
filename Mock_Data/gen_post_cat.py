@@ -72,7 +72,7 @@ dl = data['DL']
 snr = data['snr']
 del data
 # make a interpolator to evaluate redshift from luminosity distance
-z_grid = np.linspace(0.01,z_max, 400)
+z_grid = np.linspace(0,z_max, 400)
 z_eval = interp1d(omega.LuminosityDistance(z_grid), z_grid)
 
 ################## Generate Gaussian noise for SNR ##################
