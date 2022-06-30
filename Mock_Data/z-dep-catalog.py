@@ -100,6 +100,7 @@ if __name__ == '__main__':
         m2 = np.concatenate([m2,m2])
         dLValue = np.concatenate([dLValue,dLValue])/np.sqrt(magValue)
         redshiftValue_l = np.array([_find_redshift(omega, l) for l in dLValue])
+        redshiftValue = np.concatenate([redshiftValue,redshiftValue])
     else:
         redshiftValue_l = redshiftValue
     ################## Compute the SNR using gwdet package ###############
@@ -132,7 +133,7 @@ if __name__ == '__main__':
     with open(interpolator_file, "rb") as f:
         pdet = dill.load(f)
 
-    pdet_value = pdet(np.array([m1,m2,redshiftValue]).T)
+    pdet_value = pdet(np.array([m1,m2,redshiftValue_l]).T)
     randnum = uniform.rvs(size=len(m1))
     if args.L:
         index = (randnum[:N] < pdet_value[:N]) * (randnum[N:] < pdet_value[N:])
@@ -149,9 +150,17 @@ if __name__ == '__main__':
     if args.L:
         samples = np.array([m1, m2, redshiftValue, magValue, snr]).T
         names = ['m1', 'm2', 'z', 'mag', 'snr']
+        lens_label = 'lensed'
     else:
         samples = np.array([m1, m2, redshiftValue, snr]).T
         names = ['m1', 'm2', 'z', 'snr']
+        lens_label = 'unlensed'
 
-    c = corner(samples, names = names)
-    plt.savefig('cornerplot.pdf')
+    c = corner(samples, labels = names)
+    c.savefig('source_frame_{0}.pdf'.format(lens_label))
+    
+    samples[:,0] = samples[:,0]*(1+redshiftValue_l)
+    samples[:,1] = samples[:,1]*(1+redshiftValue_l)
+    
+    c1 = corner(samples, labels = names)
+    c1.savefig('detector_frame_{0}.pdf'.format(lens_label))
