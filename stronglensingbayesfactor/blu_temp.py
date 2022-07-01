@@ -2,22 +2,29 @@ import numpy as np
 from figaro.montecarlo import MC_integral
 from figaro.exceptions import FIGAROException
 import dill 
-
+import math
 
 class OddsRatio():
 
-    def __init__(self, selection=False, error=True, Nmc=int(1e5)):
+    def __init__(self, selection=False, error=True, N_image=2,Nevent=1000, Lensing_rate=0.001, Nmc=int(1e5)):
         self.Nmc = Nmc 
         self.selection = selection
         self.error = error
+        self.Nevent = Nevent
+        self.R_L = Lensing_rate
+        self.N_L = Nevent = Nevent*Lensing_rate
+        self.N_U = Nevent - N_L 
+        self.N_i = N_i
         #self.population = self.InitPopulationPrior()
     
     def __call__(self, event1, event2, population, PEuniform=True):
-        
-
         if PEuniform:
             #return self.OddsPrior() * self.BayesFactor_PEuniform(event1, event2, population) 
-            return self.BayesFactor_PEuniform(event1, event2, population) 
+            if self.error:
+                blu = self.BayesFactor_PEuniform(event1, event2, population)
+                return (self.OddsPrior()*blu[0],blu[1]) 
+            else:
+                return self.OddsPrior()*self.BayesFactor_PEuniform(event1, event2, population) 
     #maybe we can reconstruct pop prior directly  
     def InitPopulationPrior(self):
         # List is expected for computing the uncertainty from population inference
@@ -26,10 +33,7 @@ class OddsRatio():
         return 1.0 
 
     def OddsPrior(self):
-        if self.error:
-            return (1.0,1.0)
-        else:
-            return 1.0
+        return math.factorial(self.N_i) * self.N_L / self.Nevent**self.N_i
  
     def BayesFactor_PEuniform(self, event1, event2, population):
             
@@ -45,15 +49,6 @@ class OddsRatio():
         else:
             return Poverlap / Pastro_event1 / Pastro_event2 
         
-        
-
-    def BayesFactor_old(self, event1, event2):
-        
-        population = self.population
-        return self.MC_integral_3terms(event1,event2,population,n_draws=self.Nmc, error=self.error)        
-        #return np.sum(np.where(pop_prior > 0, event2_posterior / pop_prior, 0)) / pop_prior[pop_prior>0].size
-
-
     def MC_integral_3terms(self,p, q, r, n_draws = 1e4, error = True):
         """
         Monte Carlo integration using FIGARO reconstructions.
