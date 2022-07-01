@@ -4,40 +4,48 @@ from figaro.exceptions import FIGAROException
 import dill 
 import math
 
+class ReconPopulation():
+
+    def __init__(self, pop_obs=None, pdet=None):
+        self.pdet = pdet 
+        self.pop_obs = pop_obs
+        
+    def __call__(self, x):
+        return self.pdf(x)
+
+    def pdf(self, x):
+        return self.pop_obs(x) / pdet(x)
+    
 class OddsRatio():
 
-    def __init__(self, selection=False, error=True, N_image=2,Nevent=1000, Lensing_rate=0.001, Nmc=int(1e5)):
+    def __init__(self, gw_pop=None, pdet=None, error=True, N_image=2,Nevent=1000, Lensing_rate=0.001, Nmc=int(1e5)):
+        
         self.Nmc = Nmc 
-        self.selection = selection
-        self.error = error
-        self.Nevent = Nevent
-        self.R_L = Lensing_rate
+        self.error = error  # compute error or not
+        self.Nevent = Nevent # total number of events we observed 
+        self.R_L = Lensing_rate # 
         self.N_L = Nevent = Nevent*Lensing_rate
-        self.N_U = Nevent - N_L 
+        self.N_U = Nevent - self.N_L 
         self.N_i = N_image
-        #self.population = self.InitPopulationPrior()
+        if gw_pop == None:
+            raise Exception('We need population prior to compute OddsRatio!')
+        self.population = ReconPopulationPrior(gw_pop, pdet) if pdet is not None else gw_pop
     
-    def __call__(self, event1, event2, population, PEuniform=True):
+    def __call__(self, event1, event2, PEuniform=True):
         if PEuniform:
-            #return self.OddsPrior() * self.BayesFactor_PEuniform(event1, event2, population) 
+          
             if self.error:
-                blu = self.BayesFactor_PEuniform(event1, event2, population)
-                return (self.OddsPrior()*blu[0],blu[1]) 
+                plu = self.OddsPrior()
+                blu = self.BayesFactor_PEuniform(event1, event2)
+                return (plu*blu[0],plu*blu[1]) 
             else:
-                return self.OddsPrior()*self.BayesFactor_PEuniform(event1, event2, population) 
-    #maybe we can reconstruct pop prior directly  
-    def InitPopulationPrior(self):
-        # List is expected for computing the uncertainty from population inference
-        #if self.selection:
-        # Reconstruct population prior with selection function 
-        return 1.0 
-
+                return self.OddsPrior()*self.BayesFactor_PEuniform(event1, event2) 
+    
     def OddsPrior(self):
         return math.factorial(self.N_i) * self.N_L / self.Nevent**self.N_i
  
-    def BayesFactor_PEuniform(self, event1, event2, population):
-            
-        #population = self.population
+    def BayesFactor_PEuniform(self, event1, event2):    
+        population = self.population
         Poverlap = self.MC_integral_3terms(event1,event2,population, n_draws=self.Nmc,error=self.error)
         Pastro_event1 = MC_integral(population, event1, n_draws=self.Nmc,error=self.error)
         Pastro_event2 = MC_integral(population, event2, n_draws=self.Nmc,error=self.error)
