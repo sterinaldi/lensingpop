@@ -14,7 +14,7 @@ class OddsRatio():
         self.R_L = Lensing_rate
         self.N_L = Nevent = Nevent*Lensing_rate
         self.N_U = Nevent - N_L 
-        self.N_i = N_i
+        self.N_i = N_image
         #self.population = self.InitPopulationPrior()
     
     def __call__(self, event1, event2, population, PEuniform=True):
