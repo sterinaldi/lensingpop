@@ -107,16 +107,4 @@ class OddsRatio():
         figaro_error = means.var()/len(means)
         return I, np.sqrt(mc_error + figaro_error)
         
-        #return I, np.sqrt(mc_error + figaro_error)
-        
-        
-        #I = mean(I1 + I2 + ...+ I100)
-        # DELTA I = sqrt ( )
-        """
-        
-        mc_error = (probabilities.var(axis = 1)/n_draws)
-        figaro_error = np.sum(mc_error)
-        return I, np.sqrt(figaro_error) / len(means)
-        
-        """
 
