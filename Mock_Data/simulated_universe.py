@@ -33,7 +33,7 @@ w_0 = 0.3
 gamma   = -3
 mag_min = 1
 mag_max = 100
-
+rel_sd = 0.04 
 # Cosmology
 
 h = 0.674
@@ -64,6 +64,11 @@ def mass_distribution(m, z):
 @jit
 def magnification_distribution(mag):
     return (mag**gamma * (1+gamma)/(mag_max**(1+gamma) - mag_min**(1+gamma)))
+@jit
+def magnification2_distribution(mag2,mag1):
+    sigma_mag2 = rel_sd * mag1
+    return np.exp(-(mag2-mag1)**2/(2*sigma_mag2**2))/(np.sqrt(2*np.pi)*sigma_mag2)
+
 
 if __name__ == '__main__':
 

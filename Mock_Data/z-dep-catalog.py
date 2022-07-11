@@ -1,6 +1,7 @@
 import numpy as np
 import argparse
 import dill
+import time 
 
 from scipy.stats import uniform, randint
 from scipy.interpolate import interp1d
@@ -57,7 +58,10 @@ def RedshiftSampler(Nsample, lensed):
 
 def MagnificationSampler(Nsample):
     sample1 = rejection_sampler(Nsample, magnification_distribution, [mag_min,mag_max])
-    sample2 = rejection_sampler(Nsample, magnification_distribution, [mag_min,mag_max])
+    #sample2 = rejection_sampler(Nsample, magnification_distribution, [mag_min,mag_max])
+    sample2 = sample1.copy()
+    for i in range(sample1.size):
+        sample2[i]=rejection_sampler(1, lambda mag2: magnification2_distribution(mag2, sample1[i]), [mag_min,mag_max])
     return sample1, sample2
 
 def MassSampler(z):
@@ -80,7 +84,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     N = args.N # nunber of events
-
+    t0 = time.time()
     interpolator_file = Path("./gwdet_default_interpolator.pkl").resolve()
     catalog_file = Path("./PowerlawplusPeakplusDelta{:.0f}Samples.npz".format(N)).resolve()
     filtered_catalog_file = Path("./Catalog_{:.0f}Samples_afterSelection.npz".format(N)).resolve()
@@ -161,6 +165,6 @@ if __name__ == '__main__':
     
     samples[:,0] = samples[:,0]*(1+redshiftValue_l)
     samples[:,1] = samples[:,1]*(1+redshiftValue_l)
-    
+    print(time.time()-t0)
     c1 = corner(samples, labels = names)
     c1.savefig('detector_frame_{0}.pdf'.format(lens_label))
