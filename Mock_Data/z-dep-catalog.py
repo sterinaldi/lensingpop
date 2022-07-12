@@ -3,7 +3,7 @@ import argparse
 import dill
 import time 
 
-from scipy.stats import uniform, randint
+from scipy.stats import uniform, randint, norm
 from scipy.interpolate import interp1d
 import scipy.interpolate as si
 
@@ -58,10 +58,7 @@ def RedshiftSampler(Nsample, lensed):
 
 def MagnificationSampler(Nsample):
     sample1 = rejection_sampler(Nsample, magnification_distribution, [mag_min,mag_max])
-    #sample2 = rejection_sampler(Nsample, magnification_distribution, [mag_min,mag_max])
-    sample2 = sample1.copy()
-    for i in range(sample1.size):
-        sample2[i]=rejection_sampler(1, lambda mag2: magnification2_distribution(mag2, sample1[i]), [mag_min,mag_max])
+    sample2 = norm(loc = sample1, scale = sample1*rel_sd).rvs()
     return sample1, sample2
 
 def MassSampler(z):
