@@ -15,7 +15,7 @@ f_m = []
 for mi in tqdm(m):
     f_m.append(np.sum(mass_distribution(mi,z)*redshift_distribution(z)*(1+z)*dz))
 
-np.savetxt('true_mass_dist.txt', np.array([m, f_m]).T)
+np.savetxt('true_mass_dist.txt', np.array([m, f_m]).T, header = 'm p')
 
 plt.plot(m, f_m, lw = 0.7)
 plt.xlabel('$M\ [M_\\odot]$')
