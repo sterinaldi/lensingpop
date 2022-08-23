@@ -29,7 +29,7 @@ def pdet_m1zm2z(m1z,m2z,z):
     p[m2 < m_min] = 0
     p[m2 > m_max] = 0
     p[m1 < m1] = 0
-    return p
+    return np.sum(p)
 
 f_m = []
 for m1zi,m2zi in tqdm(zip(m1z_grid.flatten(), m2z_grid.flatten() ), total = len(m1z_grid.flatten()), desc = 'pdet'):
