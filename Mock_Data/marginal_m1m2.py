@@ -12,8 +12,8 @@ mass_samples = np.load(catfile)['m1']# np.concatenate((np.load(catfile)['m1'],np
 redshift_samples = np.load(catfile)['redshift']# np.concatenate((np.load(catfile)['redshift'],np.load(catfile)['redshift']))
 plt.hist(mass_samples*(1+redshift_samples), bins = int(np.sqrt(len(mass_samples))), histtype = 'step', density = True)
 
-m_pts = 1000
-z_pts = 1000
+m_pts = 500
+z_pts = 500
 z_max = 2.3
 
 m  = np.linspace(m_min, m_max*(1+z_max), m_pts)
@@ -25,11 +25,17 @@ m1z_grid, m2z_grid = np.meshgrid(m,m,indexing='ij')
 # True distribution
 
 def m_z_dist(m1z,m2z, z):
-    f = np.sum(np.array([mass_distribution(m1z/(1+zi),zi)*mass_distribution(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z]))
-    return f
+    p = np.array([mass_distribution(m1z/(1+zi),zi)*mass_distribution(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z])
+    
+    p[m1z/(1+z) < m_min] = 0
+    p[m1z/(1+z) > m_max] = 0
+    p[m2z/(1+z) < m_min] = 0
+    p[m2z/(1+z) > m_max] = 0
+    
+    return np.sum(p)
 
 f_m = []
-for m1zi,m2zi in tqdm(zip(m1z_grid.flatten(), m2z_grid.flatten() ), total = len(m1z_grid.flatten()), desc = 'TD'):
+for m1zi,m2zi in tqdm(zip(m1z_grid.flatten(), m2z_grid.flatten() ), total = len(m1z_grid.flatten()), desc = 'Real distribution'):
     if m1zi>=m2zi:
         f_m.append(m_z_dist(m1zi,m2zi,z))
     else:
@@ -38,14 +44,14 @@ for m1zi,m2zi in tqdm(zip(m1z_grid.flatten(), m2z_grid.flatten() ), total = len(
 f_m = np.reshape(f_m, (m_pts,m_pts))
 interp = RegularGridInterpolator((m,m), f_m, bounds_error=False, fill_value=0)
 
-with open('./bench_pdf.pkl', 'wb') as file:
+with open('./real_dist.pkl', 'wb') as file:
     dill.dump(interp, file)
 
 f_m = np.sum(f_m, axis=1)*dm
 
 norm = np.sum(f_m)*dm
 plt.plot(m, f_m/norm, lw = 0.7, label = '$Real\ distribution$')
-
+"""
 # No evolution
 @jit
 def mass_distribution_noevol(m, z):
@@ -65,7 +71,7 @@ def m_z_dist_noevol(m1z, m2z, z):
     return f
 
 f_m = []
-for m1zi,m2zi in tqdm(zip(m1z_grid.flatten(), m2z_grid.flatten() ), total = len(m1z_grid.flatten()), desc = 'TD'):
+for m1zi,m2zi in tqdm(zip(m1z_grid.flatten(), m2z_grid.flatten() ), total = len(m1z_grid.flatten()), desc = 'No evolution'):
     if m1zi>=m2zi:
         f_m.append(m_z_dist_noevol(m1zi,m2zi,z))
     else:
@@ -107,8 +113,7 @@ with open('./PL_pdf.pkl', 'wb') as file:
 f_m = np.sum(f_m, axis=1)*dm
 norm = np.sum(f_m)*dm
 plt.plot(m, f_m/norm, lw = 0.7, label = '$Powerlaw$')
-
-
+"""
 plt.xlabel('$M\ [M_\\odot]$')
 plt.ylabel('$p(M)$')
 plt.legend(loc = 0, frameon = False)
