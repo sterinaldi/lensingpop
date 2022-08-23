@@ -26,11 +26,13 @@ m1z_grid, m2z_grid = np.meshgrid(m,m,indexing='ij')
 
 def m_z_dist(m1z,m2z, z):
     p = np.array([mass_distribution(m1z/(1+zi),zi)*mass_distribution(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z])
-    
-    p[m1z/(1+z) < m_min] = 0
-    p[m1z/(1+z) > m_max] = 0
-    p[m2z/(1+z) < m_min] = 0
-    p[m2z/(1+z) > m_max] = 0
+    m1 = m1z/(1+z)
+    m2 = m2z/(1+z)
+    p[m1 < m_min] = 0
+    p[m1 > m_max] = 0
+    p[m2 < m_min] = 0
+    p[m2 > m_max] = 0
+    p[m1 < m1] = 0
     
     return np.sum(p)
 
@@ -51,7 +53,7 @@ f_m = np.sum(f_m, axis=1)*dm
 
 norm = np.sum(f_m)*dm
 plt.plot(m, f_m/norm, lw = 0.7, label = '$Real\ distribution$')
-"""
+
 # No evolution
 @jit
 def mass_distribution_noevol(m, z):
@@ -67,8 +69,15 @@ def weight_noevol(z):
     return w_0
     
 def m_z_dist_noevol(m1z, m2z, z):
-    f = np.sum(np.array([mass_distribution_noevol(m1z/(1+zi),zi)*mass_distribution_noevol(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z]))
-    return f
+    p = np.sum(np.array([mass_distribution_noevol(m1z/(1+zi),zi)*mass_distribution_noevol(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z]))
+    m1 = m1z/(1+z)
+    m2 = m2z/(1+z)
+    p[m1 < m_min] = 0
+    p[m1 > m_max] = 0
+    p[m2 < m_min] = 0
+    p[m2 > m_max] = 0
+    p[m1 < m1] = 0
+    return p
 
 f_m = []
 for m1zi,m2zi in tqdm(zip(m1z_grid.flatten(), m2z_grid.flatten() ), total = len(m1z_grid.flatten()), desc = 'No evolution'):
@@ -94,8 +103,15 @@ def mass_distribution_PL(m, z):
 f_m = []
 
 def m_z_dist_PL(m1z, m2z, z):
-    f = np.sum(np.array([mass_distribution_PL(m1z/(1+zi),zi)*mass_distribution_PL(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z]))
-    return f
+    p = np.sum(np.array([mass_distribution_PL(m1z/(1+zi),zi)*mass_distribution_PL(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z]))
+    m1 = m1z/(1+z)
+    m2 = m2z/(1+z)
+    p[m1 < m_min] = 0
+    p[m1 > m_max] = 0
+    p[m2 < m_min] = 0
+    p[m2 > m_max] = 0
+    p[m1 < m1] = 0
+    return p
 
 f_m = []
 for m1zi,m2zi in tqdm(zip(m1z_grid.flatten(), m2z_grid.flatten() ), total = len(m1z_grid.flatten()), desc = 'Power law'):
@@ -113,9 +129,8 @@ with open('./PL_pdf.pkl', 'wb') as file:
 f_m = np.sum(f_m, axis=1)*dm
 norm = np.sum(f_m)*dm
 plt.plot(m, f_m/norm, lw = 0.7, label = '$Powerlaw$')
-"""
-plt.xlabel('$M\ [M_\\odot]$')
-plt.ylabel('$p(M)$')
+        
+plt.xlabel('$m_1^z\ [M_\\odot]$')
+plt.ylabel('$p_{\mathrm{pdet}}(m_1^z)$')
 plt.legend(loc = 0, frameon = False)
 plt.savefig('mass_dist.pdf', bbox_inches = 'tight')
-        
