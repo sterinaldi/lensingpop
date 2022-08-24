@@ -28,7 +28,7 @@ def pdet_m1zm2z(m1z,m2z,z):
     p[m1 > m_max] = 0
     p[m2 < m_min] = 0
     p[m2 > m_max] = 0
-    p[m1 < m1] = 0
+    p[m1 < m2] = 0
     return np.sum(p)
 
 f_m = []
