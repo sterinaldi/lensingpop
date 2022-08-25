@@ -1,26 +1,14 @@
 import numpy as np
-from figaro.montecarlo import MC_integral
 from figaro.exceptions import FIGAROException
-import dill 
-import math
+import dill
+from figaro.marginal import marginalise
+from figaro.credible_regions import ConfidenceArea
+from matplotlib import rcParams
+from matplotlib import axes
 
-class ReconPopulation():
-
-    def __init__(self, pop_obs=None, pdet=None):
-        self.pdet = pdet 
-        self.pop_obs = pop_obs
-        
-    def __call__(self, x):
-        return self.pdf(x)
-
-    def pdf(self, x):
-        p = pdet(x)
-        return self.pop_obs(x) / p if p != 0 else 0.0
-
-    
 class OddsRatio():
 
-    def __init__(self, gw_pop=None, pdet=None, error=True, N_image=2,Nevent=1000, Lensing_rate=0.001, Nmc=int(1e5)):
+    def __init__(self, gw_pop=None, error=True, N_image=2,Nevent=1000, Lensing_rate=0.001, Nmc=int(1e5)):
         
         self.Nmc = Nmc 
         self.error = error  # compute error or not
@@ -29,13 +17,10 @@ class OddsRatio():
         self.N_L = Nevent = Nevent*Lensing_rate
         self.N_U = Nevent - self.N_L 
         self.N_i = N_image
-        if gw_pop == None:
-            raise Exception('We need population prior to compute OddsRatio!')
-        self.population = ReconPopulationPrior(gw_pop, pdet) if pdet is not None else gw_pop
+        self.population = gw_pop
     
     def __call__(self, event1, event2, PEuniform=True):
         if PEuniform:
-          
             if self.error:
                 plu = self.OddsPrior()
                 blu = self.BayesFactor_PEuniform(event1, event2)
@@ -44,33 +29,109 @@ class OddsRatio():
                 return self.OddsPrior()*self.BayesFactor_PEuniform(event1, event2) 
     
     def OddsPrior(self):
-        return math.factorial(self.N_i) * self.N_L / self.Nevent**self.N_i
- 
+        return np.math.factorial(self.N_i) * self.N_L / self.Nevent**self.N_i
+            
+        
     def BayesFactor_PEuniform(self, event1, event2):    
         population = self.population
-        Poverlap = self.MC_integral_3terms(event1,event2,population, n_draws=self.Nmc,error=self.error)
-        Pastro_event1 = MC_integral(population, event1, n_draws=self.Nmc,error=self.error)
-        Pastro_event2 = MC_integral(population, event2, n_draws=self.Nmc,error=self.error)
-        if self.error:
-            #Compute propagation error of BLU =   term1 / (term2 * term3)
-            blu = Poverlap[0] / Pastro_event1[0] / Pastro_event2[0]
-            prop_error = blu * np.sqrt((Poverlap[1]/Poverlap[0])**2 + (Pastro_event1[1]/Pastro_event1[0])**2 + (Pastro_event2[1]/Pastro_event2[0])**2)
-            return (blu, prop_error)
-        else:
-            return Poverlap / Pastro_event1 / Pastro_event2 
+        # BLU = A / (B*C)
+        # A = ∫p(x|d1)p(x|d2)p_pop(x)dx
+        # B = ∫p(x|d1)p_pop(x)dx
+        # C = ∫p(x|d2)p_pop(x)dx
         
-    def MC_integral_3terms(self,p, q, r, n_draws = 1e4, error = True):
+        A = self.Overlap_integral(event1,event2,population, n_draws=self.Nmc,error=self.error)
+        B = self.MC_integral(event1, population, n_draws=self.Nmc,error=self.error)
+        C = self.MC_integral(event2, population, n_draws=self.Nmc,error=self.error)
+        #print(A,B,C)
+        
+        
+        if self.error:
+            dA, dB, dC = A[1], B[1], C[1]
+            A, B, C = A[0], B[0], C[0]
+            error = dA / (B*C) - dB * A / (C * B**2) - dC * A / (C * B**2)
+            blu = A / (B*C)
+            return (0,0) if np.isnan(blu) else (blu,error)
+        else:
+            blu = A / (B*C)
+            return 0 if np.isnan(blu) else blu
+
+
+
+    def MC_integral(self, p, q, n_draws = 1e4, error = True):
         """
         Monte Carlo integration using FIGARO reconstructions.
-            ∫p(x)q(x)r(x)dx ~ ∑q(x_i)r(x_i)/N with x_i ~ p(x)
-    
-        p(x) must have a rvs() method and q(x) and r(x) must have a rvs() method.
+            ∫p(x)q(x)dx ~ ∑p(x_i)/N with x_i ~ q(x)
+
+        p(x) must have a pdf() method and q(x) must have a rvs() method.
+        Lists of p and q are also accepted.
+
+        Arguments:
+            :list or class instance p: the probability density to evaluate. Must have a pdf() method.
+            :list or class instance q: the probability density to sample from. Must have a rvs() method.
+            :int n_draws:              number of MC draws
+            :bool error:               whether to return the uncertainty on the integral value or not.
+
+        Return:
+            :double: integral value
+            :double: uncertainty (if error = True)
+        """
+        # Check that both p and q are iterables or callables:
+        if not ((hasattr(p, 'pdf') or np.iterable(p)) and (hasattr(q, 'rvs') or np.iterable(q))):
+            raise FIGAROException("p and q must be list of callables or having pdf/rvs methods")
+        # Number of p draws and methods check
+        if np.iterable(p):
+            if not np.alltrue([hasattr(pi, 'pdf') for pi in p]):
+                raise FIGAROException("p must have pdf method")
+            n_p = len(p)
+            np.random.shuffle(p)
+            iter_p = True
+        else:
+            if not hasattr(p, 'pdf'):
+                raise FIGAROException("p must have pdf method")
+            iter_p = False
+        # Number of q draws and methods check
+        if np.iterable(q):
+            if not np.alltrue([hasattr(qi, 'rvs') for qi in q]):
+                raise FIGAROException("q must have rvs method")
+            n_q = len(q)
+            np.random.shuffle(q)
+            iter_q = True
+        else:
+            if not hasattr(q, 'rvs'):
+                raise FIGAROException("q must have rvs method")
+            iter_q = False
+
+        n_draws = int(n_draws)
+
+        # Integrals
+        if iter_q:
+            samples = p.rvs(n_draws)
+            probabilities = np.array([qi.pdf(samples) for qi in q])
+        else:
+            probabilities = np.atleast_2d(q.pdf(p.rvs(n_draws)))
+
+        means = probabilities.mean(axis = 1)
+        I = means.mean()
+        if not error:
+            return I
+        mc_error = (probabilities.var(axis = 1)/n_draws).mean()
+        figaro_error = means.var()/len(means)
+
+        return I, np.sqrt(mc_error + figaro_error)
+
+
+    def Overlap_integral(self,p, q, r, n_draws = 1e4, error = True):
+        """
+        Monte Carlo integration using FIGARO reconstructions.
+            ∫p1(x)p2(x)p_pop(x)dx ~ ∑p2(x_i)p_pop(x_i)/N with x_i ~ p1(x)
+            
+        p1(x) must have a rvs() method and p2(x) and p_pop(x) must have a rvs() method.
         Lists of r is also accepted.
     
         Arguments:
-            :class instance p: the probability density to evaluate. Must have a rvs() method.
-            :class instance q: the probability density to sample from. Must have a pdf() method.
-            :list or class instance r: the probability density to sample from. Must have a pdf() method.
+            :class instance p1: the probability density to evaluate. Must have a rvs() method.
+            :class instance p2: the probability density to sample from. Must have a pdf() method.
+            :list or class instance p_pop: the probability density to sample from. Must have a pdf() method.
 
             :int n_draws:              number of MC draws
             :bool error:               whether to return the uncertainty on the integral value or not.
@@ -106,5 +167,32 @@ class OddsRatio():
         mc_error = (probabilities.var(axis = 1)/n_draws).mean()
         figaro_error = means.var()/len(means)
         return I, np.sqrt(mc_error + figaro_error)
+
+def recursive_grid(bounds, n_pts):
+    """
+    Recursively generates the n-dimensional grid points (extremes are excluded).
+    
+    Arguments:
+        :list-of-lists bounds: extremes for each dimension (excluded)
+        :int n_pts:            number of points for each dimension
         
+    Returns:
+        :np.ndarray: grid
+    """
+    bounds = np.atleast_2d(bounds)
+    n_pts  = np.atleast_1d(n_pts)
+    if len(bounds) == 1:
+        d  = np.linspace(bounds[0,0], bounds[0,1], n_pts[0]+2)[1:-1]
+        dD = d[1]-d[0]
+        return np.atleast_2d(d).T, [dD]
+    else:
+        grid_nm1, diff = recursive_grid(np.array(bounds)[1:], n_pts[1:])
+        
+        d = np.linspace(bounds[0,0], bounds[0,1], n_pts[0]+2)[1:-1]
+        diff.append(d[1]-d[0])
+        grid     = []
+        for di in d:
+            for gi in grid_nm1:
+                grid.append([di,*gi])
+        return np.array(grid), diff
 
