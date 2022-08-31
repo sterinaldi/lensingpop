@@ -54,7 +54,7 @@ def redshift_distribution(z):
     return (1 + (1+z_p)**(-alpha_z-beta_z)) * (1+z)**alpha_z / (1+((1+z)/(1+z_p))**(alpha_z+beta_z))
 
 def lensed_redshift_distribution(z):
-    return (np.array([omega.ComovingVolume(zi) for zi in z]) / vol_max ) * redshift_distribution(z)
+    return (omega.ComovingVolume(z)/ vol_max ) * redshift_distribution(z)
 @jit
 def weight(z):
     return w_0*(1+(z/z_max))
