@@ -152,24 +152,24 @@ if __name__ == '__main__':
         bounds_source = np.array([[min_mass1-0.1, max_mass1+0.1], [min_mass2-0.1, max_mass2+0.1], [-0.001, max_z+0.001]])
         mix_source    = DPGMM(bounds_source)
         draws_source   = np.array([mix_source.density_from_samples(samples_source) for _ in tqdm(range(n_draws_dpgmm), desc = 'Source frame')])
-        plot_multidim(draws_source, samples = samples_source, out_folder = selfunc_folder, name = 'source_frame_obs_dist', labels = ['M_1', 'M_2', 'z'], units = ['M_\\odot', 'M_\\odot', ''])
         with open(Path(selfunc_folder, 'draws_source.pkl'), 'wb') as f:
             dill.dump(draws_source, f)
+        try:
+            plot_multidim(draws_source, samples = samples_source, out_folder = selfunc_folder, name = 'source_frame_obs_dist', labels = ['M_1', 'M_2', 'z'], units = ['M_\\odot', 'M_\\odot', ''])
+        except:
+            pass
         
         # Detector-frame observed distribution
         bounds_detector = np.array([[min_mass1-0.1, max_mass1*(1+max_z)+0.1], [min_mass2-0.1, max_mass2*(1+max_z)+0.1], [-0.001, max_z+0.001]])
         mix_detector    = DPGMM(bounds_detector)
         draws_detector = np.array([mix_detector.density_from_samples(samples_detector) for _ in tqdm(range(n_draws_dpgmm), desc = 'Detector frame')])
-        plot_multidim(draws_detector, samples = samples_detector, out_folder = selfunc_folder, name = 'detector_frame_obs_dist', labels = ['M_1', 'M_2', 'z'], units = ['M_\\odot', 'M_\\odot', '']
         with open(Path(selfunc_folder, 'draws_detector.pkl'), 'wb') as f:
             dill.dump(draws_detector, f)
-    
-    else:
-        with open(Path(selfunc_folder, 'draws_source.pkl'), 'rb') as f:
-            draws_source = dill.load(f)
-        with open(Path(selfunc_folder, 'draws_detector.pkl'), 'rb') as f:
-            draws_detector = dill.load(f)
-            
+        try:
+            plot_multidim(draws_detector, samples = samples_detector, out_folder = selfunc_folder, name = 'detector_frame_obs_dist', labels = ['M_1', 'M_2', 'z'], units = ['M_\\odot', 'M_\\odot', ''])
+        except:
+            pass
+
     if options.evaluate_interpolators:
         # Source-frame grid
         m1 = np.linspace(min_mass1, max_mass1, m_pts)
