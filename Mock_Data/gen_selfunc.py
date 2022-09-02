@@ -1,10 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import optparse as op
+
 import h5py
 import subprocess
 import dill
+
 from figaro.mixture import DPGMM
 from figaro.cosmology import CosmologicalParameters
+from figaro.utils import plot_multidim
+
 from scipy.interpolate import RegularGridInterpolator
 from tqdm import tqdm
 from pathlib import Path
@@ -15,10 +20,8 @@ This code uses LVK's O3 search sensitivity estimates (https://zenodo.org/record/
 
 inj_file = 'endo3_bbhpop-LIGO-T2100113-v12.hdf5'
 
-ifar_threshold = 1
-n_draws_dpgmm  = 100
-draw_dists     = True
-make_selfuncs  = True
+ifar_threshold         = 1
+n_draws_dpgmm          = 100
 
 # Injected parameters
 min_mass1=2.0   # Msun
@@ -68,7 +71,7 @@ def injected_distribution_source_frame(m1, m2, z):
     p_m2 = m2**pow_mass2 * (1+pow_mass2)/(max_mass2**(pow_mass2+1) - min_mass1**(pow_mass2+1))
     p_z  = omega.ComovingVolumeElement(np.ascontiguousarray(z))/vol_max
     # Impose m1 => m2
-    p_m2[np.where(m2 > m1)] = np.inf # float/np.inf = 0.0, useful in the following
+    p_m2[np.where(m2 > m1)] = 0.
     return p_m1 * p_m2 * p_z
 
 def injected_distribution_detector_frame(m1z, m2z, z):
@@ -84,9 +87,9 @@ def marginalise_distribution(p_rec, det_frac, frame): # 'source', 'detector'
         upper_mass_1 = max_mass1*(1+max_z)
         upper_mass_2 = max_mass2*(1+max_z)
     
-    m1 = np.linspace(min_mass1, upper_mass_1, m_pts+2)[1:-1]
-    m2 = np.linspace(min_mass2, upper_mass_2, m_pts+2)[1:-1]
-    z  = np.linspace(0, max_z, z_pts+2)[1:-1]
+    m1 = np.linspace(min_mass1, upper_mass_1, m_pts)
+    m2 = np.linspace(min_mass2, upper_mass_2, m_pts)
+    z  = np.linspace(0, max_z, z_pts)
 
     dm1 = m1[1]-m1[0]
     dm2 = m2[1]-m2[0]
@@ -105,7 +108,7 @@ def marginalise_distribution(p_rec, det_frac, frame): # 'source', 'detector'
                 if frame == 'detector':
                     inj = injected_distribution_detector_frame(vals[:,0], vals[:,1], vals[:,2])
                     idx = (m1[i]/(1+z) > min_mass1) & (m2[j]/(1+z) > min_mass2) & (m1[i]/(1+z) < max_mass1) & (m2[j]/(1+z) < max_mass2)
-                    inj[~idx] = np.inf
+                rec[~idx] = 0.
 
                 s = rec/inj
                 p_m1m2z[i,j,:] = s
@@ -120,6 +123,19 @@ def marginalise_distribution(p_rec, det_frac, frame): # 'source', 'detector'
     return p_m1m2z, p_m1m2, m1, m2, z
 
 if __name__ == '__main__':
+
+    parser = op.OptionParser()
+    parser.add_option("-d", dest = "draw_dists", action = 'store_false', help = "Skip DPGMM reconstruction", default = True)
+    parser.add_option("-e", dest = "evaluate_interpolators", action = 'store_false', help = "Skip both DPGMM reconstruction and interpolator evaluation", default = True)
+    parser.add_option("-p", dest = "make_selfuncs", action = 'store_false', help = "Produce plots only", default = True)
+    
+    (options, args) = parser.parse_args()
+    
+    if options.make_selfuncs == False:
+        options.evaluate_interpolators = False
+
+    if options.evaluate_interpolators == False:
+        options.draw_dists = False
     
     if not Path(inj_file).exists():
         print('Please download the dataset endo3_bbhpop-LIGO-T2100113-v12.hdf5 from https://zenodo.org/record/5546676#.Yw9cZS8RphF')
@@ -131,27 +147,41 @@ if __name__ == '__main__':
         
     samples_source, samples_detector, det_frac = load_injections(inj_file)
     
-    if draw_dists:
+    if options.draw_dists:
         # Source-frame observed distribution
-        bounds_source = np.array([[min_mass1, max_mass1], [min_mass2, max_mass2], [0, max_z]])
+        bounds_source = np.array([[min_mass1-0.1, max_mass1+0.1], [min_mass2-0.1, max_mass2+0.1], [-0.001, max_z+0.001]])
         mix_source    = DPGMM(bounds_source)
         draws_source   = np.array([mix_source.density_from_samples(samples_source) for _ in tqdm(range(n_draws_dpgmm), desc = 'Source frame')])
+        plot_multidim(draws_source, samples = samples_source, out_folder = selfunc_folder, name = 'source_frame_obs_dist', labels = ['M_1', 'M_2', 'z'], units = ['M_\\odot', 'M_\\odot', ''])
+        with open(Path(selfunc_folder, 'draws_source.pkl'), 'wb') as f:
+            dill.dump(draws_source, f)
+        
         # Detector-frame observed distribution
-        bounds_detector = np.array([[min_mass1, max_mass1*(1+max_z)], [min_mass2, max_mass2*(1+max_z)], [0., max_z]])
+        bounds_detector = np.array([[min_mass1-0.1, max_mass1*(1+max_z)+0.1], [min_mass2-0.1, max_mass2*(1+max_z)+0.1], [-0.001, max_z+0.001]])
         mix_detector    = DPGMM(bounds_detector)
         draws_detector = np.array([mix_detector.density_from_samples(samples_detector) for _ in tqdm(range(n_draws_dpgmm), desc = 'Detector frame')])
-        
+        plot_multidim(draws_detector, samples = samples_detector, out_folder = selfunc_folder, name = 'detector_frame_obs_dist', labels = ['M_1', 'M_2', 'z'], units = ['M_\\odot', 'M_\\odot', '']
+        with open(Path(selfunc_folder, 'draws_detector.pkl'), 'wb') as f:
+            dill.dump(draws_detector, f)
+    
+    else:
+        with open(Path(selfunc_folder, 'draws_source.pkl'), 'rb') as f:
+            draws_source = dill.load(f)
+        with open(Path(selfunc_folder, 'draws_detector.pkl'), 'rb') as f:
+            draws_detector = dill.load(f)
+            
+    if options.evaluate_interpolators:
         # Source-frame grid
-        m1 = np.linspace(min_mass1, max_mass1, m_pts+2)[1:-1]
-        m2 = np.linspace(min_mass2, max_mass2, m_pts+2)[1:-1]
-        z  = np.linspace(0, max_z, z_pts+2)[1:-1]
+        m1 = np.linspace(min_mass1, max_mass1, m_pts)
+        m2 = np.linspace(min_mass2, max_mass2, m_pts)
+        z  = np.linspace(0, max_z, z_pts)
         m1_grid, m2_grid, z_grid = np.meshgrid(m1,m2,z)
         vals_source = np.array([[m1i, m2i, zi] for m1i,m2i,zi in zip(m1_grid.flatten(), m2_grid.flatten(), z_grid.flatten())])
     
         # Detector-frame grid
-        m1z = np.linspace(min_mass1, max_mass1*(1+max_z), m_pts+2)[1:-1]
-        m2z = np.linspace(min_mass2, max_mass2*(1+max_z), m_pts+2)[1:-1]
-        z   = np.linspace(0, max_z, z_pts+2)[1:-1]
+        m1z = np.linspace(min_mass1, max_mass1*(1+max_z), m_pts)
+        m2z = np.linspace(min_mass2, max_mass2*(1+max_z), m_pts)
+        z   = np.linspace(0, max_z, z_pts)
         m1z_grid, m2z_grid, z_grid = np.meshgrid(m1z,m2z,z)
         vals_detector = np.array([[m1zi, m2zi, zi] for m1zi,m2zi,zi in zip(m1z_grid.flatten(), m2z_grid.flatten(), z_grid.flatten())])
 
@@ -173,7 +203,7 @@ if __name__ == '__main__':
         with open('rec_interpolators.pkl', 'rb') as f:
             pdf_median_source, pdf_median_detector = dill.load(f)
     
-    if make_selfuncs:
+    if options.make_selfuncs:
         # Source-frame selection functions (2D & 3D)
         p_m1m2z_source, p_m1m2_source, m1, m2, z = marginalise_distribution(pdf_median_source, det_frac, frame = 'source')
         # 3D
