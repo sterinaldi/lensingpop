@@ -279,7 +279,7 @@ if __name__ == '__main__':
     sf_m2z  = np.sum(sf_m1zm2z, axis = 0)*dm1z
     sf_m2z /= np.sum(sf_m2z)*dm2z
     ax2.plot(m2z, sf_m2z, lw = 0.8)
-    ax2.set_ylabel('$S_2(M_2)$')
+    ax2.set_ylabel('$S_2(M_2^z)$')
     ax2.set_xlabel('$M_{1,2}^z$')
     ax2.grid()
     fig.savefig(Path(selfunc_folder, 'selection_function_detector_frame.pdf'), bbox_inches = 'tight')
