@@ -8,7 +8,7 @@ import dill
 
 from figaro.mixture import DPGMM
 from figaro.cosmology import CosmologicalParameters
-from figaro.utils import plot_multidim
+from figaro.utils import plot_multidim, recursive_grid
 
 from scipy.interpolate import RegularGridInterpolator
 from tqdm import tqdm
@@ -32,6 +32,7 @@ min_mass2=2.0   # Msun
 max_mass2=100.0 # Msun
 pow_mass2=1.0
 
+min_z=0.001
 max_z=1.9
 pow_z=1.0
 
@@ -40,11 +41,15 @@ h  = 0.679 # km/s/Mpc
 om = 0.3065
 ol = 0.6935
 omega = CosmologicalParameters(h, om, ol, -1, 0)
-vol_max = omega.ComovingVolume(max_z)
+
+# Normalisations
+logV = np.log(omega.ComovingVolume(max_z) - omega.ComovingVolume(min_z))
+logM1 = np.log((max_mass1**(1+pow_mass1)-min_mass1**(1+pow_mass1))/(1+pow_mass1))
+logM2 = np.log((max_mass2**(1+pow_mass2)-min_mass2**(1+pow_mass2))/(1+pow_mass2))
 
 # Grid parameters
-m_pts = 100
-z_pts = 100
+m_pts = 200
+z_pts = 200
 
 def load_injections(file):
     with h5py.File(file, 'r') as f:
@@ -66,16 +71,19 @@ def load_injections(file):
         
         return samples_source, samples_detector, n_rec/n_gen
 
-def injected_distribution_source_frame(m1, m2, z):
-    p_m1 = m1**pow_mass1 * (1+pow_mass1)/(max_mass1**(pow_mass1+1) - min_mass1**(pow_mass1+1))
-    p_m2 = m2**pow_mass2 * (1+pow_mass2)/(max_mass2**(pow_mass2+1) - min_mass1**(pow_mass2+1))
-    p_z  = omega.ComovingVolumeElement(np.ascontiguousarray(z))/vol_max
-    # Impose m1 => m2
-    p_m2[np.where(m2 > m1)] = 0.
-    return p_m1 * p_m2 * p_z
+def log_mass_distribution_source_frame(m1, m2, log_norm):
+    p_m1 = np.log(m1)*pow_mass1 - logM1
+    p_m2 = np.log(m2)*pow_mass2 - logM2
+    p_m2[m1 < m2] = -np.inf
+    return p_m1 + p_m2 - log_norm
+    
+def injected_distribution_source_frame(m1, m2, z, log_norm_mass):
+    p_m = log_mass_distribution_source_frame(m1,m2,z)
+    p_z = np.log([omega.ComovingVolumeElement_double(zi) for zi in z]) - logV
+    return np.exp(p_m + p_z)
 
-def injected_distribution_detector_frame(m1z, m2z, z):
-    return injected_distribution_source_frame(m1z/(1+z), m2z/(1+z), z)/(1+z)**2
+def injected_distribution_detector_frame(m1z, m2z, z, log_norm_mass):
+    return injected_distribution_source_frame(m1z/(1+z), m2z/(1+z), z, log_norm_mass)/(1+z)**2
 
 def marginalise_distribution(p_rec, det_frac, frame): # 'source', 'detector'
     
@@ -89,7 +97,11 @@ def marginalise_distribution(p_rec, det_frac, frame): # 'source', 'detector'
     
     m1 = np.linspace(min_mass1, upper_mass_1, m_pts)
     m2 = np.linspace(min_mass2, upper_mass_2, m_pts)
-    z  = np.linspace(0, max_z, z_pts)
+    z  = np.linspace(min_z, max_z, z_pts)
+    
+    grid_norm, dgrid_norm = recursive_grid([[min_mass1, upper_mass_1], [min_mass2, upper_mass_2]], [m_pts, m_pts])
+    
+    log_norm_mass = np.log(np.sum(np.exp(log_mass_distribution_source_frame(grid_norm[:,0], grid_norm[:,1], 0))*np.prod(dgrid_norm)))
 
     dm1 = m1[1]-m1[0]
     dm2 = m2[1]-m2[0]
@@ -104,9 +116,10 @@ def marginalise_distribution(p_rec, det_frac, frame): # 'source', 'detector'
                 vals = np.array([[m1[i], m2[j], zi] for zi in z])
                 rec  = p_rec(vals)
                 if frame == 'source':
-                    inj = injected_distribution_source_frame(vals[:,0], vals[:,1], vals[:,2])
+                    inj = injected_distribution_source_frame(vals[:,0], vals[:,1], vals[:,2], log_norm_mass)
+                    idx = (m1[i] > min_mass1) & (m2[j] > min_mass2) & (m1[i] < max_mass1) & (m2[j] < max_mass2)
                 if frame == 'detector':
-                    inj = injected_distribution_detector_frame(vals[:,0], vals[:,1], vals[:,2])
+                    inj = injected_distribution_detector_frame(vals[:,0], vals[:,1], vals[:,2], log_norm_mass)
                     idx = (m1[i]/(1+z) > min_mass1) & (m2[j]/(1+z) > min_mass2) & (m1[i]/(1+z) < max_mass1) & (m2[j]/(1+z) < max_mass2)
                 rec[~idx] = 0.
 
@@ -169,19 +182,24 @@ if __name__ == '__main__':
             plot_multidim(draws_detector, samples = samples_detector, out_folder = selfunc_folder, name = 'detector_frame_obs_dist', labels = ['M_1', 'M_2', 'z'], units = ['M_\\odot', 'M_\\odot', ''])
         except:
             pass
+    else:
+        with open(Path(selfunc_folder, 'draws_source.pkl'), 'rb') as f:
+            draws_source = dill.load(f)
+        with open(Path(selfunc_folder, 'draws_detector.pkl'), 'rb') as f:
+            draws_detector = dill.load(f)
 
     if options.evaluate_interpolators:
         # Source-frame grid
         m1 = np.linspace(min_mass1, max_mass1, m_pts)
         m2 = np.linspace(min_mass2, max_mass2, m_pts)
-        z  = np.linspace(0, max_z, z_pts)
+        z  = np.linspace(min_z, max_z, z_pts)
         m1_grid, m2_grid, z_grid = np.meshgrid(m1,m2,z)
         vals_source = np.array([[m1i, m2i, zi] for m1i,m2i,zi in zip(m1_grid.flatten(), m2_grid.flatten(), z_grid.flatten())])
     
         # Detector-frame grid
         m1z = np.linspace(min_mass1, max_mass1*(1+max_z), m_pts)
         m2z = np.linspace(min_mass2, max_mass2*(1+max_z), m_pts)
-        z   = np.linspace(0, max_z, z_pts)
+        z   = np.linspace(min_z, max_z, z_pts)
         m1z_grid, m2z_grid, z_grid = np.meshgrid(m1z,m2z,z)
         vals_detector = np.array([[m1zi, m2zi, zi] for m1zi,m2zi,zi in zip(m1z_grid.flatten(), m2z_grid.flatten(), z_grid.flatten())])
 
