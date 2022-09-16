@@ -63,15 +63,20 @@ def load_injections(file):
         mass2 = np.array(inj['mass2_source'])
         z     = np.array(inj['redshift'])
         
+        # Get the total number of injections and then the total number of injections that were detected
         n_gen = float(np.array(f['injections'].attrs['total_generated']))
         n_rec = float(len(mass1))
         
+        # Only load the mass1, mass2, z samples
         samples_source   = np.array([mass1, mass2, z]).T
         samples_detector = np.array([mass1*(1+z), mass2*(1+z), z]).T
-        
-        return samples_source, samples_detector, n_rec/n_gen
+     
+        det_frac = n_rec/n_gen
+        return samples_source, samples_detector, det_frac
 
 def log_mass_distribution_source_frame(m1, m2, log_norm):
+    ''' Prior used by the LVK
+    '''
     p_m1 = np.log(m1)*pow_mass1 - logM1
     p_m2 = np.log(m2)*pow_mass2 - logM2
     p_m2[m1 < m2] = -np.inf
@@ -85,15 +90,25 @@ def injected_distribution_source_frame(m1, m2, z, log_norm_mass):
 def injected_distribution_detector_frame(m1z, m2z, z, log_norm_mass):
     return injected_distribution_source_frame(m1z/(1+z), m2z/(1+z), z, log_norm_mass)/(1+z)**2
 
-def marginalise_distribution(p_rec, det_frac, frame): # 'source', 'detector'
-    
+def marginalise_distribution(pdf_reconstructed, det_frac, frame): # 'source', 'detector'
+    ''' This function is used to get the pdet(theta); in this case the theta is m1,m2 in source of detector frame. 
+
+        ARGS:
+        -----
+        - pdf_reconstructed: The reconstructed pdf p(theta|det)
+        - det_frac: Fraction of detected events p(det) = N_detected/N_total
+        - frame: 'source' or 'detector' frame (returns the pdet function in source or detector frame)
+        -----
+        - returns: p_m1m2z, p_m1m2, m1, m2, z
+    '''
     if frame == 'source':
         upper_mass_1 = max_mass1
         upper_mass_2 = max_mass2
-        
-    if frame == 'detector':
+    elif frame == 'detector':
         upper_mass_1 = max_mass1*(1+max_z)
         upper_mass_2 = max_mass2*(1+max_z)
+    else:
+        raise ValueError("Error: Invalid frame value:",frame)
     
     m1 = np.linspace(min_mass1, upper_mass_1, m_pts)
     m2 = np.linspace(min_mass2, upper_mass_2, m_pts)
@@ -114,7 +129,7 @@ def marginalise_distribution(p_rec, det_frac, frame): # 'source', 'detector'
         for j in range(m_pts):
             if m1[i] >= m2[j]:
                 vals = np.array([[m1[i], m2[j], zi] for zi in z])
-                rec  = p_rec(vals)
+                rec  = pdf_reconstructed(vals)
                 if frame == 'source':
                     inj = injected_distribution_source_frame(vals[:,0], vals[:,1], vals[:,2], log_norm_mass)
                     idx = (m1[i] > min_mass1) & (m2[j] > min_mass2) & (m1[i] < max_mass1) & (m2[j] < max_mass2)
@@ -158,13 +173,16 @@ if __name__ == '__main__':
     if not selfunc_folder.exists():
         selfunc_folder.mkdir()
         
+    # Load (m1,m2,z) in source and detector frame, also also give the detected fraction
     samples_source, samples_detector, det_frac = load_injections(inj_file)
     
     if options.draw_dists:
         # Source-frame observed distribution
-        bounds_source = np.array([[min_mass1-0.1, max_mass1+0.1], [min_mass2-0.1, max_mass2+0.1], [-0.001, max_z+0.001]])
-        mix_source    = DPGMM(bounds_source)
-        draws_source   = np.array([mix_source.density_from_samples(samples_source) for _ in tqdm(range(n_draws_dpgmm), desc = 'Source frame')])
+        bounds_source = np.array([[min_mass1-0.1, max_mass1+0.1], [min_mass2-0.1, max_mass2+0.1], [-0.001, max_z+0.001]]) # Boundaries
+        mix_source    = DPGMM(bounds_source) # Initialize DPGMM
+        # Infer the density p(\theta) in the source frame quantities (this includes all of the parameters ). 
+        # Note: Inferring this N times, where N = n_draws_dpgmm
+        draws_source  = np.array([mix_source.density_from_samples(samples_source) for _ in tqdm(range(n_draws_dpgmm), desc = 'Source frame')]) # 
         with open(Path(selfunc_folder, 'draws_source.pkl'), 'wb') as f:
             dill.dump(draws_source, f)
         try:
@@ -172,10 +190,11 @@ if __name__ == '__main__':
         except:
             pass
         
-        # Detector-frame observed distribution
+        # Detector-frame observed distribution (same as above but for detector frame)
         bounds_detector = np.array([[min_mass1-0.1, max_mass1*(1+max_z)+0.1], [min_mass2-0.1, max_mass2*(1+max_z)+0.1], [-0.001, max_z+0.001]])
         mix_detector    = DPGMM(bounds_detector)
         draws_detector = np.array([mix_detector.density_from_samples(samples_detector) for _ in tqdm(range(n_draws_dpgmm), desc = 'Detector frame')])
+        # Save results:
         with open(Path(selfunc_folder, 'draws_detector.pkl'), 'wb') as f:
             dill.dump(draws_detector, f)
         try:
@@ -183,6 +202,7 @@ if __name__ == '__main__':
         except:
             pass
     else:
+        # Load results:
         with open(Path(selfunc_folder, 'draws_source.pkl'), 'rb') as f:
             draws_source = dill.load(f)
         with open(Path(selfunc_folder, 'draws_detector.pkl'), 'rb') as f:
@@ -204,9 +224,9 @@ if __name__ == '__main__':
         vals_detector = np.array([[m1zi, m2zi, zi] for m1zi,m2zi,zi in zip(m1z_grid.flatten(), m2z_grid.flatten(), z_grid.flatten())])
 
         # Source-frame median distribution
-        pdfs_source       = np.array([d.pdf(vals_source) for d in tqdm(draws_source, desc = 'Source-frame draws')])
-        median_source     = np.percentile(pdfs_source, 50, axis = 0).reshape((m_pts, m_pts, z_pts))
-        pdf_median_source = RegularGridInterpolator(points = (m1, m2, z), values = median_source, method = 'linear')
+        pdfs_source       = np.array([d.pdf(vals_source) for d in tqdm(draws_source, desc = 'Source-frame draws')]) # 2D array
+        median_source     = np.percentile(pdfs_source, 50, axis = 0).reshape((m_pts, m_pts, z_pts)) # Get median for vals_source and put into 3D grid
+        pdf_median_source = RegularGridInterpolator(points = (m1, m2, z), values = median_source, method = 'linear') # Make a 3D interpolator
         
         # Detector-frame median distribution
         pdfs_detector       = np.array([d.pdf(vals_detector) for d in tqdm(draws_detector, desc = 'Detector-frame draws')])
