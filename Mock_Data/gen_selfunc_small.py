@@ -21,7 +21,7 @@ This code uses LVK's O3 search sensitivity estimates (https://zenodo.org/record/
 inj_file = 'endo3_bbhpop-LIGO-T2100113-v12.hdf5'
 
 ifar_threshold         = 1
-n_draws_dpgmm          = 30
+n_draws_dpgmm          = 20
 
 # Injected parameters
 min_mass1=2.0   # Msun
@@ -48,10 +48,10 @@ logM1 = np.log((max_mass1**(1+pow_mass1)-min_mass1**(1+pow_mass1))/(1+pow_mass1)
 logM2 = np.log((max_mass2**(1+pow_mass2)-min_mass2**(1+pow_mass2))/(1+pow_mass2))
 
 # Grid parameters
-m_pts = 100
-z_pts = 100
+m_pts = 10
+z_pts = 10
 
-def load_injections(file, nsamples=10000):
+def load_injections(file, nsamples=10):
     with h5py.File(file, 'r') as f:
         inj = f['injections']
 
@@ -70,7 +70,7 @@ def load_injections(file, nsamples=10000):
         # Only choose nsamples to avoid excessive computational cost
         if nsamples == -1:
             nsamples = len(mass1)
-        idx = np.random.randint(0,len(mass_1),nsamples)
+        idx = np.random.randint(0,len(mass1),nsamples)
         mass1 = mass1[idx]
         mass2 = mass2[idx]
         z     = z[idx]
