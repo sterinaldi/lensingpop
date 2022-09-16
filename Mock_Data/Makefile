@@ -10,3 +10,5 @@ rec_interpolators.pkl: gen_selfunc.py endo3_bbhpop-LIGO-T2100113-v12.hdf5
 	python3 $<
 	echo "42"
 
+quicktest: gen_selfunc_small.py
+	python3 $<
