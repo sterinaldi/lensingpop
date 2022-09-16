@@ -67,11 +67,13 @@ def load_injections(file, nsamples=10000):
         n_gen = float(np.array(f['injections'].attrs['total_generated']))
         n_rec = float(len(mass1))
 
+        # Only choose nsamples to avoid excessive computational cost
         if nsamples == -1:
             nsamples = len(mass1)
-        mass1 = mass1[:nsamples]
-        mass2 = mass2[:nsamples]
-        z     = z[:nsamples]
+        idx = np.random.randint(0,len(mass_1),nsamples)
+        mass1 = mass1[idx]
+        mass2 = mass2[idx]
+        z     = z[idx]
         
         # Only load the mass1, mass2, z samples
         samples_source   = np.array([mass1, mass2, z]).T
