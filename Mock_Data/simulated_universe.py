@@ -14,7 +14,8 @@ from numba import jit
 alpha_z = 2.7
 beta_z  = 2.9
 z_p     = 1.9
-z_max   = 10
+#z_max   = 10
+z_max = 2.3
 
 # Mass distribution
 # PowerLaw
