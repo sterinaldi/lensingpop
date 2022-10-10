@@ -58,10 +58,11 @@ def RedshiftSampler(Nsample, lensed):
     rejection sampling procedure.
     """
     if lensed:
-        sample = []
-        for _ in tqdm(range(Nsample), desc = 'Sampling redshift'):
-            sample.append( rejection_sampler(1, lensed_redshift_distribution, [0, z_max]))
-        sample = np.array(sample)
+#        sample = []
+#        for _ in tqdm(range(Nsample), desc = 'Sampling redshift'):
+#            sample.append( rejection_sampler(1, lensed_redshift_distribution, [0, z_max]))
+#        sample = np.array(sample)
+        sample = rejection_sampler(Nsample, lensed_redshift_distribution, [0, z_max])
     else:
         sample = rejection_sampler(Nsample, redshift_distribution, [0,z_max])
     return sample
@@ -204,7 +205,7 @@ if __name__ == '__main__':
 
 
 ################## Save the data after applying selection effect ########################################################
-    snr[index]=snr_cal.snr(m1[index],m2[index],redshiftValue[index])
+#    snr[index]=snr_cal.snr(m1[index],m2[index],redshiftValue[index])
 
 
 
