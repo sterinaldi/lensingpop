@@ -15,20 +15,19 @@ alpha_z = 2.7
 beta_z  = 2.9
 z_p     = 1.9
 #z_max   = 10
-
+z_min = 0.20 #0.2
 z_max = 1.3
 # Mass distribution
 # PowerLaw
 m_min = 5 # default = 1
 m_max = 100
-alpha = -1.85   #-1.35
-#Peak
-mu_0  = 45  #default = 35
-sigma = 2
+alpha = -2.0   #default -1.35, v1 = -1.85
+mu_0  = 45  #default = 35, v1 = 45, v2=50
+sigma = 2.0 #2
 dmudz = 20
 
 # Relative weight
-w_0 = 0.15 # default = 0.3
+w_0 = 0.04 # 0.0001 # default = 0.3, v1=0.1, v2=0.02
 
 # Magnification distribution
 gamma   = -3
@@ -42,7 +41,7 @@ om = 0.315
 ol = 0.685
 
 omega = CosmologicalParameters(h, om, ol, -1, 0)
-vol_max = omega.ComovingVolume(z_max)
+vol_max = omega.ComovingVolume(np.array([z_max]))
 
 pl = 1.0
 
