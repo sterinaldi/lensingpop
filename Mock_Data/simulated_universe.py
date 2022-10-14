@@ -43,7 +43,7 @@ ol = 0.685
 omega = CosmologicalParameters(h, om, ol, -1, 0)
 vol_max = omega.ComovingVolume(np.array([z_max]))
 
-pl = 1.0
+#pl = 1.0
 
 @jit
 def mu(z):
@@ -70,9 +70,9 @@ def magnification_distribution(mag):
 def magnification2_distribution(mag2,mag1):
     sigma_mag2 = rel_sd * mag1
     return np.exp(-(mag2-mag1)**2/(2*sigma_mag2**2))/(np.sqrt(2*np.pi)*sigma_mag2)
-@jit
-def powerlaw_distribution(x):
-    return x**pl * (1+pl)/(1.0**(1+pl) )
+#@jit
+#def powerlaw_distribution(x):
+#    return x**pl * (1+pl)/(1.0**(1+pl) )
 
 
 

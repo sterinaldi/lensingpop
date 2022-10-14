@@ -4,20 +4,17 @@ import dill
 import time 
 
 from scipy.stats import uniform, randint, norm
-from scipy.interpolate import interp1d
-import scipy.interpolate as si
-
 from corner import corner
 
 from pathlib import Path
 from tqdm import tqdm
 
-from pycbc import waveform, psd, detector
-#import gwdet
+#from pycbc import waveform, psd, detector
 from figaro.utils import rejection_sampler
 from figaro.load import _find_redshift
 from simulated_universe import *
-#from calculate_snr_veske import *
+
+
 
 # Here come all the definitions used in this script
 def AntennaPattern(inclination, rightAscension, declination, polarisation, 
