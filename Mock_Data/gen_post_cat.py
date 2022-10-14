@@ -1,12 +1,10 @@
 import numpy as np
 import argparse
 from scipy.stats import truncnorm   
-#from scipy.interpolate import interp1d
 from simulated_universe import *
 from figaro.load import _find_redshift
 from pathlib import Path
 import time
-#from calculate_snr_veske import *
 import dill
 np.random.seed(0)
 # Here come all the definitions used in this script
