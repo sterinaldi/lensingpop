@@ -117,4 +117,4 @@ for i in tqdm(range(0,Mz.size), desc = 'Posteriors'):
 """
 Warning: the 'redshift' entry does not match with 'z_posterior' since the latter is computed from the luminosity distance (which is affected by the presence of the lens).
 """
-np.savez(Path('./m1m2z_posterior_PPD_afterSelection.npz'), m1=m1, m2=m2, redshift=redshift, m1_posterior = m1_posterior, m2_posterior = m2_posterior, z_posterior = z_posterior)
+np.savez(Path('./m1m2z_posterior_PPD_afterSelection_'+str(m1.size)+'_unlensed.npz'), m1=m1, m2=m2, redshift=redshift, m1_posterior = m1_posterior, m2_posterior = m2_posterior, z_posterior = z_posterior)

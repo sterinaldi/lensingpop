@@ -43,6 +43,7 @@ class Gaussian_spin_distribution():
 
         self.model=ss.multivariate_normal(mean=mean, cov=cov)
         self.normalization = self.GetNormalization()
+#        print(self.normalization)
     
     def GetGrid(self, n_pts=100):
         xeff  = np.linspace(self.eff_bounds[0], self.eff_bounds[1], n_pts)
@@ -139,7 +140,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     N = args.N # number of binary events
     
-    savedir = './spin_data.npz'
+
+    if args.L:
+        savedir = './spin_data_'+str(N)+'_lensed.npz'    
+    else:
+        savedir = './spin_data_'+str(N)+'_unlensed.npz'
 
     # Initialize the spin population model
     spin_pop = Gaussian_spin_distribution(**spin_pars)

@@ -9,7 +9,7 @@ from corner import corner
 from pathlib import Path
 from tqdm import tqdm
 
-#from pycbc import waveform, psd, detector
+from pycbc import waveform, psd, detector
 from figaro.utils import rejection_sampler
 from figaro.load import _find_redshift
 from simulated_universe import *
@@ -72,10 +72,18 @@ def xRedshiftSampler(Nsample, lensed):
 
 
 
+def magnification2_distribution(mag2,mag1):
+    sigma_mag2 = rel_sd * mag1
+    return np.exp(-(mag2-mag1)**2/(2*sigma_mag2**2))/(np.sqrt(2*np.pi)*sigma_mag2)
+
 
 def MagnificationSampler(Nsample):
     sample1 = rejection_sampler(Nsample, magnification_distribution, [mag_min,mag_max])
-    sample2 = norm(loc = sample1, scale = sample1*rel_sd).rvs()
+    sample2 = []
+    for mu1 in tqdm(sample1, desc = 'Sampling magnification2'):    
+        sample2.append(rejection_sampler(1, lambda mu2: magnification2_distribution(mu2, mu1),[mag_min,mag_max]))        
+    #sample2 = norm.rvs(loc = sample1, scale = sample1*rel_sd)
+    sample2 = np.array(sample2).reshape(sample1.shape)
     return sample1, sample2
 
 
@@ -103,8 +111,13 @@ if __name__ == '__main__':
     t0 = time.time()
     interpolator_file = Path("./selfunc_m1m2z_source.pkl").resolve()
     #interpolator_file = Path("./gwdet_default_interpolator.pkl").resolve() 
-    catalog_file = Path("./PowerlawplusPeakplusDelta{:.0f}Samples.npz".format(N)).resolve()
-    filtered_catalog_file = Path("./Catalog_{:.0f}Samples_afterSelection.npz".format(N)).resolve()
+
+    if args.L:
+        catalog_file = Path("./PowerlawplusPeakplusDelta{:.0f}Samples_{}.npz".format(N,'lensed')).resolve()
+        filtered_catalog_file = Path("./Catalog_{:.0f}Samples_afterSelection_{}.npz".format(N,'lensed')).resolve()
+    else:
+        catalog_file = Path("./PowerlawplusPeakplusDelta{:.0f}Samples_{}.npz".format(N,'unlensed')).resolve()
+        filtered_catalog_file = Path("./Catalog_{:.0f}Samples_afterSelection_{}.npz".format(N,'unlensed')).resolve()
 
     # Start the sampling shenanigans
     redshiftValue = RedshiftSampler(Nsample=N, lensed = args.L)
