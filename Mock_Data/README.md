@@ -1,41 +1,19 @@
 # Mock data
 
-Power-law + Peak + Delta population
+To generate the mock data that include masses, redshift, and spin components, please do the following.
 
-Please find the catalog data in `PowerlawplusPeakplusDelta1000000Samples.npz` <br />
-and observed catalog in `PowerlawplusPeakplusDelta1000000Samples_afterSelection.npz` (after applying the selection effect). 
+1. Run `python z-dep-catalog.py -N 30000`(will get ~3300 observed events) to get observed catalog (filtered by the detectability function). <br />
+In the `Catalog_30000Samples_afterSelection.npz` file, we have m1, m2, redshift data. <br />
+2. Run `python gen_post_cat.py -i Catalog_30000Samples_afterSelection.npz` to get posterior for m1, m2, z. <br />
 
-`PowerlawplusPeakplusDelta1000000Samples.npz` has 1000000 events while `PowerlawplusPeakplusDelta1000000Samples_afterSelection.npz` has 1986 events
+Check the number of events after the selection by the file produced by step2, something like `m1m2z_posterior_PPD_afterSelection_xxx.npz`:  
+3. Run `spin_pop.py -N xxx` to get spin catalog and posterior.
 
-Chcke accessible data:
+4. Combine the data into 1 file, run `combine_data.py -N xxx`.
 
-    data  = np.load("PowerlawplusPeakplusDelta1000000Samples.npz")
-    print(data.files)
-    #output:['m1', 'm2', 'redshift', 'snr', 'inclinationValue', 'polarisationValue', 'rightAscensionValue', 'declinationValue', 'GPStimeValue']
-
-Load the data:
-    
-    m1 = data['m1']
-    ...
+It contains detector frame m1,m2 posteriors, redshift posterior and spin components' posteriors of the observed catalog.
 
 
 
-Please find the mock posterior data in `m1m2posterior_PPD_afterSelection1000000.npz`.
-
-It contains events' m1,m2 posteriors of the observed catalog.
 
 
-The selection function in `gwdet` package is used. It gives the probability for detecting the event with parameters `m1, m2, z`
-However, it is not compatible with current `scipy` version. 
-
-Therefore, the selection function is saved in `gwdet_default_interpolator` and can be loaded by using `pickle`.
-
-
-    with open("gwdet_default_interpolator", "rb") as f:
-
-        pdet = pickle.load(f)
-
-
-    pdet_value = pdet(np.array([m1,m2,redshiftValue]).T)
-
-The input of the function should be `(N,3)`, where `N` is the number of events.
