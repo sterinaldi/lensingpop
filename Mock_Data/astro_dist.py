@@ -1,9 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import dill
+import copy
 
 from figaro.utils import recursive_grid
 from figaro.credible_regions import ConfidenceArea
+from figaro.marginal import marginalise as marg_figaro
+from figaro.plot import plot_median_cr
 
 from pathlib import Path
 from tqdm import tqdm
@@ -12,10 +15,8 @@ from matplotlib import rcParams
 from scipy.interpolate import RegularGridInterpolator
 
 class AstroDist:
-    def __init__(self, points, pdet):
-        self.points = points
-        self.pdet   = pdet
-        self.I      = RegularGridInterpolator() # FIXME: sistemare
+    def __init__(self, points, f):
+        self.I = RegularGridInterpolator(points, f) # FIXME: sistemare
     
     def __call__(self, x):
         return pdf(x)
@@ -24,9 +25,7 @@ class AstroDist:
         m1  = x[:,0]
         m2  = x[:,1]
         chi = x[:,2]
-        return self.I(m1, m2/m1, chi)/m1
-    
-    
+        return self.I(m1, m2/m1, chi)*m1
 
 def marginalise(draws, dims, dgrid):
     marg = draws
@@ -185,12 +184,12 @@ if __name__ == '__main__':
     postprocess = False
     out_name = 'astro_m1m2chieff'
     
-    draws_file   = Path('posteriors_hier.pkl') # Change for specific paths
+    draws_file   = Path('production/posteriors_hier.pkl') # Change for specific paths
     selfunc_file = Path('selfunc_m1m2z_source.pkl')
-    n_pts  = np.array([50,50,100,30])
-    m1_bds = [5.,120]#240.]
-    q_bds  = [5./240.,1.]#[5.,240.]
-    z_bds  = [0.01,1.9]
+    n_pts  = np.array([75,75,80,10])
+    z_bds  = [0.01,1.3]
+    m1_bds = [15*(1+z_bds[0]), 98*(1+z_bds[1])]
+    q_bds  = [0.2, 1.]#[5.,240.]
     X_bds  = [-1.,1.]
     bounds    = np.array([m1_bds, q_bds, z_bds, X_bds]) # Please check that these bounds are
     bounds_3d = np.array([m1_bds, q_bds, X_bds])
@@ -200,7 +199,7 @@ if __name__ == '__main__':
     z  = np.linspace(z_bds[0], z_bds[1], n_pts[2]+2)[1:-1]
     chieff = np.linspace(X_bds[0], X_bds[1], n_pts[3]+2)[1:-1]
     
-    dgrid = [m1[1]-m1[0], [], z[1]-z[0], chieff[1]-chieff[0]]
+    dgrid = [m1[1]-m1[0], q[1]-q[0], z[1]-z[0], chieff[1]-chieff[0]]
 
     with open(draws_file, 'rb') as f:
         draws = dill.load(f)
@@ -222,35 +221,25 @@ if __name__ == '__main__':
             for k, zi in enumerate(z):
                 for l, xi in enumerate(chieff):
                     grid[i*dn_m1 + j*dn_q + k*dn_z + l] = [m1i, qi*m1i, zi, xi]
-                    grid_3d[i*(n_pts[1]*n_pts[3]) + j*n_pts[3] + l] = [m1i, qi, xi]
+                    grid_3d[i*(n_pts[1]*n_pts[3]) + j*n_pts[3] + l] = [m1i, qi*m1i, xi]
     
-    dgrid[1] = 1.
     print('Evaluating pdet...')
     m1_g = grid[:,0]
     m2_g = grid[:,1]
     z_g  = grid[:,2]
-    det_jacobian = (1+z_g)/m1_g
-    pdet = (selfunc((m1_g/(1+z_g), m2_g/(1+z_g), z_g))*det_jacobian).reshape(n_pts)
+    X_g  = grid[:,3]
+    det_jacobian = (1/m1_g).reshape(n_pts)
+    pdet = selfunc((m1_g/(1+z_g), m2_g/(1+z_g), z_g)).reshape(n_pts)
     pdet[np.where(pdet == 0.)] = np.inf
-    '''
-    To do: move to griddata (https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html) and take points in m2 between 0 and m1
-    '''
-    astro_dists   = np.array([np.sum((d.pdf(grid).reshape(n_pts) / pdet) * dgrid[2], axis = 2).reshape(n_pts[0]*n_pts[1]*n_pts[3]) for d in tqdm(draws, total = len(draws), desc = 'Astro Dists')])
-    interpolators = [AstroDist(grisd_3d, d) for d in astro_dists]
+    astro_dists   = np.array([np.sum((d.pdf(grid).reshape(n_pts)) / det_jacobian / pdet * dgrid[2], axis = 2) for d in tqdm(draws[:100], total = len(draws[:100]), desc = 'Astro Dists')])
+    _ = dgrid.pop(2)
+    print(np.sum(astro_dists[0] * np.prod(dgrid)))
+    astro_dists = [a / np.sum(a*np.prod(dgrid)) for a in astro_dists]
+    print('Making plot...')
+    plot_multidim(astro_dists, 3, bounds_3d, np.delete(n_pts, 2), dgrid, out_folder = './production', name = out_name, labels = labels, units = units)
+    mass_dist = marg_figaro(draws, [1,2,3])
+    plot_median_cr(mass_dist, out_folder = 'production', true_value = 20.)
+    print('Saving interpolators...')
+    interpolators = [AstroDist((m1, m1*q, chieff), d) for d in astro_dists]
     with open(out_name+'.pkl', 'wb') as f:
         dill.dump(interpolators, f)
-    astro_dists = [d.reshape(n_pts[0], n_pts[1], n_pts[3]) for d in astro_dists]
-    _ = dgrid.pop(2)
-    print('Making plot...')
-    
-    n_spls = int(1e5)
-    pmax = np.max(astro_dists[0])
-#
-#    samples = np.random.uniform(low = bounds_3d[:,0], high = bounds_3d[:,1], size = (n_spls, 3))
-#    refs = interpolators[0].pdf(samples)
-#    vals = np.random.uniform(low = 0, high = pmax, size = n_spls)
-#    samples = samples[np.where(vals < refs)]
-#    c = corner(samples)
-#    c.savefig('crnr.pdf', bbox_inches = 'tight')
-    plot_multidim(astro_dists, 3, bounds_3d, np.delete(n_pts, 2), dgrid, out_folder = '.', name = out_name, labels = labels, units = units)
-##    plot_multidim([pdet], 3, bounds_3d, n_pts[:-1], dgrid, out_folder = '.', name = out_name, labels = labels, units = units)
