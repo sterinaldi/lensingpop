@@ -16,16 +16,16 @@ from scipy.interpolate import RegularGridInterpolator
 
 class AstroDist:
     def __init__(self, points, f):
-        self.I = RegularGridInterpolator(points, f) # FIXME: sistemare
+        self.I = RegularGridInterpolator(points, f, fill_value = 0., bounds_error = False) # FIXME: sistemare
     
     def __call__(self, x):
-        return pdf(x)
+        return self.pdf(x)
         
     def pdf(self, x):
         m1  = x[:,0]
         m2  = x[:,1]
         chi = x[:,2]
-        return self.I(m1, m2/m1, chi)*m1
+        return self.I((m1, m2/m1, chi))/m1 # Jacobian
 
 def marginalise(draws, dims, dgrid):
     marg = draws
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     
     draws_file   = Path('production/posteriors_hier.pkl') # Change for specific paths
     selfunc_file = Path('selfunc_m1m2z_source.pkl')
-    n_pts  = np.array([75,75,80,10])
+    n_pts  = np.array([75,75,80,30])
     z_bds  = [0.01,1.3]
     m1_bds = [15*(1+z_bds[0]), 98*(1+z_bds[1])]
     q_bds  = [0.2, 1.]#[5.,240.]
@@ -229,17 +229,17 @@ if __name__ == '__main__':
     z_g  = grid[:,2]
     X_g  = grid[:,3]
     det_jacobian = (1/m1_g).reshape(n_pts)
+    # Selection function in source-frame mass
     pdet = selfunc((m1_g/(1+z_g), m2_g/(1+z_g), z_g)).reshape(n_pts)
     pdet[np.where(pdet == 0.)] = np.inf
-    astro_dists   = np.array([np.sum((d.pdf(grid).reshape(n_pts)) / det_jacobian / pdet * dgrid[2], axis = 2) for d in tqdm(draws[:100], total = len(draws[:100]), desc = 'Astro Dists')])
+    # Astrophysical distribution and marginalisation on z
+    astro_dists   = np.array([np.sum((d.pdf(grid).reshape(n_pts)) / det_jacobian / pdet * dgrid[2], axis = 2) for d in tqdm(draws[:1], total = len(draws[:1]), desc = 'Astro Dists')])
     _ = dgrid.pop(2)
-    print(np.sum(astro_dists[0] * np.prod(dgrid)))
     astro_dists = [a / np.sum(a*np.prod(dgrid)) for a in astro_dists]
+    # Plot
     print('Making plot...')
     plot_multidim(astro_dists, 3, bounds_3d, np.delete(n_pts, 2), dgrid, out_folder = './production', name = out_name, labels = labels, units = units)
-    mass_dist = marg_figaro(draws, [1,2,3])
-    plot_median_cr(mass_dist, out_folder = 'production', true_value = 20.)
     print('Saving interpolators...')
-    interpolators = [AstroDist((m1, m1*q, chieff), d) for d in astro_dists]
-    with open(out_name+'.pkl', 'wb') as f:
+    interpolators = [AstroDist((m1, q, chieff), d) for d in astro_dists]
+    with open('./production/'+out_name+'.pkl', 'wb') as f:
         dill.dump(interpolators, f)
