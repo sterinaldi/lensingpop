@@ -185,7 +185,7 @@ if __name__ == '__main__':
     out_name = 'astro_m1m2chieff'
     
     draws_file   = Path('production/posteriors_hier.pkl') # Change for specific paths
-    selfunc_file = Path('selfunc_m1m2z_source.pkl')
+    selfunc_file = Path('production/selfunc_m1m2z_source.pkl')
     n_pts  = np.array([75,75,80,30])
     z_bds  = [0.01,1.3]
     m1_bds = [15*(1+z_bds[0]), 98*(1+z_bds[1])]
@@ -233,7 +233,7 @@ if __name__ == '__main__':
     pdet = selfunc((m1_g/(1+z_g), m2_g/(1+z_g), z_g)).reshape(n_pts)
     pdet[np.where(pdet == 0.)] = np.inf
     # Astrophysical distribution and marginalisation on z
-    astro_dists   = np.array([np.sum((d.pdf(grid).reshape(n_pts)) / det_jacobian / pdet * dgrid[2], axis = 2) for d in tqdm(draws[:1], total = len(draws[:1]), desc = 'Astro Dists')])
+    astro_dists   = np.array([np.sum((d.pdf(grid).reshape(n_pts)) / det_jacobian / pdet * dgrid[2], axis = 2) for d in tqdm(draws, total = len(draws), desc = 'Astro Dists')])
     _ = dgrid.pop(2)
     astro_dists = [a / np.sum(a*np.prod(dgrid)) for a in astro_dists]
     # Plot
