@@ -1,22 +1,10 @@
 import numpy as np
-from matplotlib import rcParams
-from matplotlib import axes
 import matplotlib.pyplot as plt
 from figaro.utils import get_priors, plot_median_cr, plot_multidim, recursive_grid
-from figaro.credible_regions import ConfidenceArea
 from matplotlib.ticker import MaxNLocator
-from mpl_toolkits.axes_grid.inset_locator import inset_axes  
-import dill
-import copy
 from tqdm import tqdm
-from figaro.marginal import marginalise as marg_figaro
-from figaro.plot import plot_median_cr
-from pathlib import Path
-import matplotlib.pyplot as plt
 plt.style.use('./plotrc.mplstyle')
-import numpy as np
 import matplotlib as mpl
-from cycler import cycler
 
 mpl.rcParams['lines.linewidth'] = 2
 #mpl.rcParams['lines.linestyle'] = '--'
@@ -58,32 +46,28 @@ def plot_multidim(axs, draws, dim, sample_dist = None, labels = None, units = No
     lim = [15*(1+z_bds[0]), 98*(1+z_bds[1])]
     if plt_lim is None:
         plt_lim = lim
-    #lim = [1.52,150]
-    if HDPGMM_model: 
 
+    if HDPGMM_model: 
         n_pts  = np.array([75,75,75])
         q_bds  = [0.2, 1.]
         q  = np.linspace(q_bds[0], q_bds[1], n_pts[1]+2)[1:-1]
         m = np.linspace(lim[0], lim[1], n_pts[0]+2)[1:-1]
         dm = m[1]-m[0]
         chieff = np.linspace(-1.,1., n_pts[2]+2)[1:-1]
-
         dgrid = [m[1]-m[0], m[1]-m[0], chieff[1]-chieff[0]]
 
         dims = list(np.arange(dim, dtype = int))
         dims.remove(column)
         grid  = np.zeros(shape = (np.prod(n_pts), 3))
-        kk=0
+
         for i, m1i in enumerate(m):
             for j, qi in enumerate(q):
                     for l, xi in enumerate(chieff):
                         grid[i*(n_pts[1]*n_pts[2]) + j*n_pts[2] + l] = [m1i, m1i*qi, xi]
  
         astro_dists = np.array([(d.pdf(grid).reshape(n_pts)) for d in tqdm(draws, total = len(draws), desc = 'Astro Dists')])
-        
         probs = np.array([m.sum(axis = tuple(dims))*np.prod([dgrid[k] for k in dims]) for m in astro_dists])
         # Credible regions
-
         x = np.linspace(lim[0], lim[1], n_pts[column]+2)[1:-1]
         dx = x[1]-x[0]  
         percentiles = [50, 5, 16, 84, 95]
@@ -98,11 +82,7 @@ def plot_multidim(axs, draws, dim, sample_dist = None, labels = None, units = No
         ax.fill_between(x, p[95], p[5], color = 'mediumturquoise', alpha = 0.5)
         ax.fill_between(x, p[84], p[16], color = 'darkturquoise', alpha = 0.5)
         ax.plot(x, p[50], lw = 0.7, color = 'steelblue', label = r'$\mathrm{(H)DPGMM}$')
-    data= np.load('/Users/damon/Desktop/lensingpop/Mock_Data/catalog/PowerlawplusPeakplusDelta30000Samples.npz')
-    m1 = data['m1']
-    z = data['redshift']
-    ax.hist(m1*(1+z),bins=50,density=True,histtype='step',label=r'$\mathrm{observation}$')
-    del m1, z
+
     m = np.linspace(lim[0], lim[1], 75)
     dm = m[1]-m[0]
     xeff = np.linspace(-1,1, 75)
@@ -118,7 +98,6 @@ def plot_multidim(axs, draws, dim, sample_dist = None, labels = None, units = No
     
     if PL_dist:
         f_m = sample_dist[1](grid).reshape(m1z_grid.shape)
-        ax.plot(m, f_m/norm, lw = 1.5, color='orange', label=r'$\mathrm{PL prior}$')
     elif uni_dist:
         f_m = np.repeat(lim[0]*lim[1],75**3).reshape(m1z_grid.shape)
         
@@ -138,12 +117,11 @@ def plot_multidim(axs, draws, dim, sample_dist = None, labels = None, units = No
     ax.yaxis.set_major_locator(MaxNLocator(3)) 
 
     ax.set_ylabel(r'$p(\theta)$',fontsize=18)
-    #if labels is not None:
-        #ax.set_xlabel(r'$m_1^z [M_{\odot}]$')
-    ticks = np.linspace(lim[0], lim[1], 5)
-    ax.set_xticks(ticks)
     [l.set_rotation(45) for l in ax.get_xticklabels()]
     ax.set_xlim(plt_lim[0],plt_lim[1])
+    ticks = np.linspace(plt_lim[0], plt_lim[1], 5)
+    ticks = [20,50,80,110,140]
+    ax.set_xticks(ticks)
     ax.tick_params(axis='both', which='major', labelsize=18)
     ax.legend()
         
