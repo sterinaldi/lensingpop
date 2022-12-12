@@ -136,15 +136,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate population and posterior samples.')
     parser.add_argument("-L", dest = "L", action = 'store_true', help = "Generate lensed population", default = False) # True to turn on the lensing mechanism
     parser.add_argument("-N", type = int, help = "number of population events", default=1986) 
-    
     args = parser.parse_args()
     N = args.N # number of binary events
-    
 
     if args.L:
-        savedir = './spin_data_'+str(N)+'_lensed.npz'    
+        savedir = './catalog/spin_data_'+str(N)+'_lensed.npz'    
     else:
-        savedir = './spin_data_'+str(N)+'_unlensed.npz'
+        savedir = './catalog/spin_data_'+str(N)+'_unlensed.npz'
 
     # Initialize the spin population model
     spin_pop = Gaussian_spin_distribution(**spin_pars)

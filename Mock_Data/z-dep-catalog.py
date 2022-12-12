@@ -109,15 +109,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
     N = args.N # nunber of events
     t0 = time.time()
-    interpolator_file = Path("./selfunc_m1m2z_source.pkl").resolve()
+    interpolator_file = Path("./selection_functions/selfunc_m1m2z_source.pkl").resolve()
     #interpolator_file = Path("./gwdet_default_interpolator.pkl").resolve() 
+    snr_file =  Path("./snr/snr_m1m2z.pkl").resolve()
 
     if args.L:
-        catalog_file = Path("./PowerlawplusPeakplusDelta{:.0f}Samples_{}.npz".format(N,'lensed')).resolve()
-        filtered_catalog_file = Path("./Catalog_{:.0f}Samples_afterSelection_{}.npz".format(N,'lensed')).resolve()
+        catalog_file = Path("./catalog/PowerlawplusPeakplusDelta{:.0f}Samples_{}.npz".format(N,'lensed')).resolve()
+        filtered_catalog_file = Path("./catalog/Catalog_{:.0f}Samples_afterSelection_{}.npz".format(N,'lensed')).resolve()
     else:
-        catalog_file = Path("./PowerlawplusPeakplusDelta{:.0f}Samples_{}.npz".format(N,'unlensed')).resolve()
-        filtered_catalog_file = Path("./Catalog_{:.0f}Samples_afterSelection_{}.npz".format(N,'unlensed')).resolve()
+        catalog_file = Path("./catalog/PowerlawplusPeakplusDelta{:.0f}Samples_{}.npz".format(N,'unlensed')).resolve()
+        filtered_catalog_file = Path("./catalog/Catalog_{:.0f}Samples_afterSelection_{}.npz".format(N,'unlensed')).resolve()
 
     # Start the sampling shenanigans
     redshiftValue = RedshiftSampler(Nsample=N, lensed = args.L)
@@ -155,7 +156,7 @@ if __name__ == '__main__':
     ################## Calculate SNR ###################
     snr = []
 
-    with open('snr_m1m2z.pkl','rb') as f:
+    with open(snr_file,'rb') as f:
         f_snr = dill.load(f)
 
     snr = f_snr(np.array([m1,m2,redshiftValue_l]).T) / dLValue

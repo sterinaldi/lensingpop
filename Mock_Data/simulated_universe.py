@@ -33,7 +33,7 @@ w_0 = 0.04 # 0.0001 # default = 0.3, v1=0.1, v2=0.02
 gamma   = -3
 mag_min = 1
 mag_max = 100
-rel_sd = 0.04 
+rel_sd = 0.15 
 # Cosmology
 
 h = 0.674
@@ -70,11 +70,6 @@ def magnification_distribution(mag):
 def magnification2_distribution(mag2,mag1):
     sigma_mag2 = rel_sd * mag1
     return np.exp(-(mag2-mag1)**2/(2*sigma_mag2**2))/(np.sqrt(2*np.pi)*sigma_mag2)
-#@jit
-#def powerlaw_distribution(x):
-#    return x**pl * (1+pl)/(1.0**(1+pl) )
-
-
 
 if __name__ == '__main__':
 

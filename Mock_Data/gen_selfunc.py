@@ -160,6 +160,7 @@ if __name__ == '__main__':
         
     samples_source, samples_detector, det_frac = load_injections(inj_file)
     
+    
     if options.draw_dists:
         # Source-frame observed distribution
         bounds_source = np.array([[min_mass1-0.1, max_mass1+0.1], [min_mass2-0.1, max_mass2+0.1], [-0.001, max_z+0.001]])
