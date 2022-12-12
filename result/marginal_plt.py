@@ -98,36 +98,40 @@ def plot_multidim(axs, draws, dim, sample_dist = None, labels = None, units = No
         ax.fill_between(x, p[95], p[5], color = 'mediumturquoise', alpha = 0.5)
         ax.fill_between(x, p[84], p[16], color = 'darkturquoise', alpha = 0.5)
         ax.plot(x, p[50], lw = 0.7, color = 'steelblue', label = r'$\mathrm{(H)DPGMM}$')
-    data= np.load('/Users/damon/Desktop/lensingpop/Mock_Data/PowerlawplusPeakplusDelta30000Samples.npz')
-
-#data= np.load('/Users/damon/Desktop/lensingpop/Mock_Data/m1m2zxeffxp_posterior_PPD_afterSelection_104_lensed.npz')
+    data= np.load('/Users/damon/Desktop/lensingpop/Mock_Data/catalog/PowerlawplusPeakplusDelta30000Samples.npz')
     m1 = data['m1']
-    
     z = data['redshift']
     ax.hist(m1*(1+z),bins=50,density=True,histtype='step',label=r'$\mathrm{observation}$')
     del m1, z
-    m = np.linspace(lim[0], lim[1], 80)
+    m = np.linspace(lim[0], lim[1], 75)
     dm = m[1]-m[0]
-    m1z_grid, m2z_grid = np.meshgrid(m,m,indexing='ij')
-    
-    f_m = sample_dist[0](np.array([m1z_grid.flatten(), m2z_grid.flatten()]).T).reshape(m1z_grid.shape)
+    xeff = np.linspace(-1,1, 75)
+    dxeff = xeff[1]-xeff[0]
+    m1z_grid, m2z_grid, xeff_grid = np.meshgrid(m,m,xeff,indexing='ij')
+    grid = np.array([m1z_grid.flatten(), m2z_grid.flatten(), xeff_grid.flatten()]).T
+    f_m = sample_dist[0](grid).reshape(m1z_grid.shape)
     f_m[np.isnan(f_m)] =0
-    f_m = np.sum(f_m, axis=1)*dm
+    f_m = np.sum(f_m,axis=-1)*dxeff
+    f_m = np.sum(f_m, axis=-1)*dm
     norm = np.sum(f_m)*dm
     ax.plot(m, f_m/norm, lw = 1.5, color='black', label=r'$\mathrm{Real dist}$')
     
     if PL_dist:
-        f_m = sample_dist[1](np.array([m1z_grid.flatten(), m2z_grid.flatten()]).T).reshape(m1z_grid.shape)
-        f_m[np.isnan(f_m)] =0
-        f_m = np.sum(f_m, axis=1)*dm
-        norm = np.sum(f_m)*dm
+        f_m = sample_dist[1](grid).reshape(m1z_grid.shape)
         ax.plot(m, f_m/norm, lw = 1.5, color='orange', label=r'$\mathrm{PL prior}$')
     elif uni_dist:
-        f_m = np.repeat(lim[0]*lim[1],80**2).reshape(m1z_grid.shape)
-        f_m[np.isnan(f_m)] =0
-        f_m = np.sum(f_m, axis=1)*dm
-        norm = np.sum(f_m)*dm
+        f_m = np.repeat(lim[0]*lim[1],75**3).reshape(m1z_grid.shape)
+        
+    f_m[np.isnan(f_m)] =0
+    f_m = np.sum(f_m,axis=-1)*dxeff
+    f_m = np.sum(f_m, axis=-1)*dm
+    norm = np.sum(f_m)*dm
+  
+    if PL_dist:
+        ax.plot(m, f_m/norm, lw = 1.5, color='orange', label=r'$\mathrm{PL prior}$')
+    elif uni_dist:
         ax.plot(m, f_m/norm, lw = 1.5, color='green', label=r'$\mathrm{uniform prior}$')
+        
     ax.set_ylim(0,0.04)
     ax.set_xticks([])
     ax.set_yticks([])

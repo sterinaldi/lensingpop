@@ -1,15 +1,16 @@
 import numpy as np
 from figaro.exceptions import FIGAROException
 import dill
+import sys
+data_dir = '/Users/damon/desktop/lensingpop/Mock_data'
+sys.path.insert(0, data_dir)
 from simulated_universe import *
-from spin_pop import *
+from xeff_pop import *
 
 class mix_pop():
-    def __init__(self,file,peak=False,marginal_xeff=False):
-        self.peak = peak
-        self.marginal_xeff = marginal_xeff
+    def __init__(self,file,wide=False):
         with open(file, 'rb') as f: self.pop_pdf = dill.load(f)
-        self.spin_pop = Gaussian_spin_distribution(self.peak, **spin_pars)
+        self.spin_pop = Gaussian_spin_distribution(wide, **spin_pars)
     def __call__(self, x):
         return self.pdf(x)
     
@@ -17,10 +18,7 @@ class mix_pop():
         return 1
     
     def pdf(self, x):
-        if self.marginal_xeff:
-            return self.pop_pdf(x[:,:2]) *self.spin_pop.marginal_pxeff(x[:,-1])
-        else:
-            return self.pop_pdf(x[:,:2])  *self.spin_pop.pdf(x[:,-2],x[:,-1],x=self.peak)
+        return self.pop_pdf(x[:,:2])  *self.spin_pop.prob(x[:,-1])
 
 
 def log_blu(data,error=True):
@@ -84,14 +82,10 @@ class OddsRatio():
             :double: uncertainty (if error = True)
         """
         population = self.population
-
-        
         A = self.Overlap_integral(event1,event2,population, n_draws=self.Nmc,error=self.error)
         B = self.MC_integral(event1, population, n_draws=self.Nmc,error=self.error)
         C = self.MC_integral(event2, population, n_draws=self.Nmc,error=self.error)
-        #print('x',A,B,C)
-        
-        
+#        print('x',A,B,C)
         if self.error:
             dA, dB, dC = A[1], B[1], C[1]
             A, B, C = A[0], B[0], C[0]
@@ -101,8 +95,6 @@ class OddsRatio():
         else:
             blu = A / (B*C)
             return 0 if np.isnan(blu) else blu
-
-
 
     def MC_integral(self, p, q, n_draws = 1e4, error = True):
         """
@@ -154,9 +146,10 @@ class OddsRatio():
         if iter_q:
             samples = p.rvs(n_draws)
             probabilities = np.array([qi.pdf(samples) for qi in q])
+            probabilities[np.isnan(probabilities)] = 0
         else:
             probabilities = np.atleast_2d(q.pdf(p.rvs(n_draws)))
-
+            probabilities[np.isnan(probabilities)] = 0
         means = probabilities.mean(axis = 1)
         I = means.mean()
         if not error:
@@ -208,13 +201,6 @@ class OddsRatio():
             samples = p.rvs(n_draws)
             samples = samples
             probabilities = np.atleast_2d(r.pdf(samples)*q.pdf(samples))
-            #x=r.pdf(samples)
-            #x[np.isnan(x)] = 0
-            #print('pop',x.mean())
-            #x=q.pdf(samples)
-            #x[np.isnan(x)] = 0
-            #print('q',x.mean())
-            #print('size 0',probabilities[np.isnan(probabilities)].size)
             probabilities[np.isnan(probabilities)] = 0
         means = probabilities.mean(axis = 1)
         I = means.mean()
