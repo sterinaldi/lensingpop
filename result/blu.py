@@ -2,7 +2,7 @@ import numpy as np
 from figaro.exceptions import FIGAROException
 import dill
 import sys
-data_dir = '/Users/damon/desktop/lensingpop/Mock_data'
+data_dir = './Mock_data'
 sys.path.insert(0, data_dir)
 from simulated_universe import *
 from xeff_pop import *
@@ -89,7 +89,7 @@ class OddsRatio():
         if self.error:
             dA, dB, dC = A[1], B[1], C[1]
             A, B, C = A[0], B[0], C[0]
-            error = dA / (B*C) - dB * A / (C * B**2) - dC * A / (B * C**2)
+            error = np.sqrt( (dA / (B*C))**2 + (dB * A / (C * B**2))**2 + (dC * A / (B * C**2))**2)
             blu = A / (B*C)
             return (0,0) if np.isnan(blu) else (blu,error)
         else:
