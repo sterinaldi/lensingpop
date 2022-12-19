@@ -75,7 +75,7 @@ for i, m1i in tqdm(enumerate(m), desc = 'Grid', total = n_pts[0]):
         
             
             
-# Benchmark (m1 m2 z) distribution
+# Benchmark distribution
 def m_z_dist(m1z,m2z, z):
     p = np.array([mass_distribution(m1z/(1+zi),zi)*mass_distribution(m2z/(1+zi),zi)*redshift_distribution(zi)*dz*(m1z)/((1+zi)**3) for zi in z])
     m1 = m1z/(1+z)
@@ -117,17 +117,17 @@ with open('../result/pop_prior/benchmark_dist.pkl', 'wb') as f:
 
 
 # PL
-def mass_distribution_PL(mm1,mm2, z):
-    beta = 0.2
-    return (mm1**alpha * (1+alpha)/(m_max**(1+alpha) - m_min**(1+alpha))) *  ((mm2/mm1)**beta / (1+beta)/(1**(1+beta) - q_bds[0]**(1+beta)))  
-    #if mm1 <= m_min: return 0
-    #return (mm1**alpha * (1+alpha)/(m_max**(1+alpha) - m_min**(1+alpha))) /( mm1-m_min)
+def mass_distribution_PL(m1s, q, alpha, beta):
+    norm_m1 =  (m_max**(1+alpha) - m_min**(1+alpha))/(1+alpha)
+    norm_q = (1**(1+beta) - 0.2**(1+beta)) / (1+beta)
+    return (m1s**alpha) / norm_m1 *  (q**beta)/norm_q
+
 f_m = []
 
+beta = 0.2
 def m_z_dist_PL(m1z, m2z, z):
     #p = np.array([mass_distribution_PL(m1z/(1+zi),zi)*mass_distribution_PL(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z])
-    p = np.array([mass_distribution_PL(m1z/(1+zi),m2z/(1+zi),zi)*redshift_distribution(zi)*dz/((1+zi)) for zi in z])
-    #p = np.array([mass_distribution_PL(m1z/(1+zi),zi)/(m_max-m_min)*redshift_distribution(zi)*dz/((1+zi)**2) for zi in z])
+    p = np.array([mass_distribution_PL(m1z/(1+zi),m2z/(1+zi),alpha, beta)*redshift_distribution(zi)*dz/((1+zi)) for zi in z])
     m1 = m1z/(1+z)
     m2 = m2z/(1+z)
     p[m1 < m_min] = 0
@@ -146,7 +146,6 @@ for m1zi,m2zi in tqdm(grid[:,:2], total = len(grid), desc = 'Power law'):
 #det_jacobian = (1/grid[:,0])
 #f_m = f_m / det_jacobian
 f_m = np.reshape(f_m, n_pts)
-
         
 # Normalization of p(m1z, m2z, chi)
 # samples from (m1z,q) uniform distribution
@@ -174,18 +173,19 @@ dims.remove(0)
 m1_bds = [15*(1+z_bds[0]), 98*(1+z_bds[1])]
 n_pts  = np.array([75,75,75])
 m = np.linspace(m1_bds[0], m1_bds[1], n_pts[0]+2)[1:-1]
+q = np.linspace(0.2, 1, n_pts[1]+2)[1:-1]
 dm = m[1]-m[0]
 chieff = np.linspace(-1.,1., n_pts[2]+2)[1:-1]
-dgrid = [m[1]-m[0], m[1]-m[0], chieff[1]-chieff[0]]
+dgrid = [m[1]-m[0], q[1]-q[0], chieff[1]-chieff[0]]
 
 dims = list(np.arange(dim, dtype = int))
 dims.remove(0)
 grid  = np.zeros(shape = (np.prod(n_pts), 3))
 
 for i, m1i in enumerate(m):
-    for j, m2i in enumerate(m):
+    for j, qi in enumerate(q):
             for l, xi in enumerate(chieff):
-                grid[i*(n_pts[1]*n_pts[2]) + j*n_pts[2] + l] = [m1i, m2i, xi]
+                grid[i*(n_pts[1]*n_pts[2]) + j*n_pts[2] + l] = [m1i, m1i*qi, xi]
 
         
 # plot benchmark m1z
