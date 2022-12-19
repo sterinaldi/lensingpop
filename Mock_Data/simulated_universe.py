@@ -44,6 +44,9 @@ omega = CosmologicalParameters(h, om, ol, -1, 0)
 vol_max = omega.ComovingVolume(np.array([z_max]))
 
 #pl = 1.0
+@jit
+def PL_distribution(m, z):
+    return (1-weight(z))*(m**alpha * (1+alpha)/(m_max**(1+alpha) - m_min**(1+alpha))) + weight(z)*norm(m, z)
 
 @jit
 def mu(z):
