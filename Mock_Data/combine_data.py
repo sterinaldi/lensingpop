@@ -8,9 +8,9 @@ parser.add_argument("-L", dest = "L", action = 'store_true', help = "Generate le
 args = parser.parse_args()
 N = args.N # nunber of events
 
-m1m2zfile = './m1m2z_posterior_PPD_afterSelection_'+str(N)
-spinfile = './spin_data_'+str(N)
-outputfile = 'm1m2zxeffxp_posterior_PPD_afterSelection_'+str(N)
+m1m2zfile = './catalog/m1m2z_posterior_PPD_afterSelection_'+str(N)
+spinfile = './catalog/spin_data_'+str(N)
+outputfile = './catalog/m1m2zxeff_posterior_'+str(N)
 
 if args.L:
     m1m2zfile += '_lensed.npz'
@@ -33,11 +33,8 @@ zp = data['z_posterior']
 
 data= np.load(spinfile)
 xeff=data['chi_eff']
-xp=data['chi_p']
 xeffp=data['eff_posterior']
-xpp=data['p_posterior']
 
 
-np.savez(outputfile,m1=m1,m2=m2,redshift=z,
-         xeff=xeff,xp=xp,m1_posterior=m1p,m2_posterior=m2p,z_posterior=zp,
-        xeff_posterior = xeffp, xp_posterior=xpp)
+np.savez(outputfile,m1=m1,m2=m2,redshift=z,xeff=xeff,
+        m1_posterior=m1p,m2_posterior=m2p,z_posterior=zp,xeff_posterior = xeffp)

@@ -35,14 +35,14 @@ z_pts = 200
 dim=2
 dims = list(np.arange(dim, dtype = int))
 dims.remove(0)
-n_pts  = np.array([200,200])
+n_pts  = np.array([m_pts,z_pts])
 #q_bds  = [0.2, 1.]
 #q  = np.linspace(q_bds[0], q_bds[1], n_pts[1]+2)[1:-1]
 #m = np.linspace(lim[0], lim[1], n_pts[0]+2)[1:-1]
 #dm = m[1]-m[0]
 #chieff = np.linspace(-1.,1., n_pts[2]+2)[1:-1]
 #dgrid = [m[1]-m[0], m[1]-m[0], chieff[1]-chieff[0]]
-
+"""
 m  = np.linspace(m_min, m_max*(1+z_max), m_pts)
 q  = np.linspace(0, 1, m_pts)
 z  = np.linspace(0, z_max, z_pts)
@@ -52,11 +52,22 @@ dz = z[1]-z[0]
 for i, m1i in enumerate(m):
     for j, qi in enumerate(q):
             grid[i*n_pts[1] + j] = [m1i, m1i*qi]
+"""
+
+m  = np.linspace(m_min, m_max*(1+z_max), m_pts)
+q  = np.linspace(0, 1, m_pts)
+z  = np.linspace(0, z_max, z_pts)
+grid  = np.zeros(shape = (np.prod(n_pts), 2))
+dgrid = [m[1]-m[0], m[1]-m[0]]
+dz = z[1]-z[0]
+for i, m1i in enumerate(m):
+    for j, m2i in enumerate(m):
+            grid[i*n_pts[1] + j] = [m1i, m2i]
 
 # True distribution
 
 def m_z_dist(m1z,m2z, z):
-    p = np.array([mass_distribution(m1z/(1+zi),zi)*mass_distribution(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z])
+    p = np.array([mass_distribution(m1z/(1+zi),zi)*mass_distribution(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/((1+zi)**2) for zi in z])
     m1 = m1z/(1+z)
     m2 = m2z/(1+z)
     p[m1 < m_min] = 0
@@ -73,14 +84,18 @@ for m1zi,m2zi in tqdm(grid, total = len(grid), desc = 'Real distribution'):
     else:
         f_m.append(0)
 
+norm = np.sum(f_m)*(m[1]-m[0])**2 /2
 f_m = np.reshape(f_m, n_pts)
-interp = RegularGridInterpolator((m,m), f_m, bounds_error=False, fill_value=0)
 
-with open('./real_distv2.pkl', 'wb') as file:
+print(norm)
+interp = RegularGridInterpolator((m,m), f_m/norm, bounds_error=False, fill_value=0)
+
+with open('./real_distv3.pkl', 'wb') as file:
     dill.dump(interp, file)
 
 probs = np.array([f_m.sum(axis = tuple(dims))*np.prod([dgrid[k] for k in dims])]).reshape(m.shape)
-norm = probs.sum()*dgrid[0]
+norm = probs.sum()*dgrid[0] 
+
 ax.plot(m, probs/norm, lw = 0.7, label = 'Benchmark',color='black')
 """
 # No evolution
@@ -125,15 +140,21 @@ norm = np.sum(f_m)*dm
 plt.plot(m, f_m/norm, lw = 0.7, linestyle='dashed', label = '$No\ evolution$')
 """
 # PL
+#@jit
+#def mass_distribution_PL(m,z):
+#    return (m**alpha * (1+alpha)/(m_max**(1+alpha) - m_min**(1+alpha))) 
 @jit
 def mass_distribution_PL(mm1,mm2, z):
-    beta = 0.0
-    return (mm1**alpha * (1+alpha)/(m_max**(1+alpha) - m_min**(1+alpha))) *  (mm2**beta * (1+beta)/(1**(1+beta) - 0.1**(1+beta)))  
+    beta = 0.2
+    return (mm1**alpha * (1+alpha)/(m_max**(1+alpha) - m_min**(1+alpha))) *  ((mm2/mm1)**beta * (1+beta)/(1**(1+beta) - 0.2**(1+beta)))  
+    #if mm1 <= m_min: return 0
+    #return (mm1**alpha * (1+alpha)/(m_max**(1+alpha) - m_min**(1+alpha))) /( mm1-m_min)
 f_m = []
 
 def m_z_dist_PL(m1z, m2z, z):
     #p = np.array([mass_distribution_PL(m1z/(1+zi),zi)*mass_distribution_PL(m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z])
-    p = np.array([mass_distribution_PL(m1z/(1+zi),m2z/(1+zi),zi)*redshift_distribution(zi)*dz/(1+zi)**2 for zi in z])
+    p = np.array([mass_distribution_PL(m1z/(1+zi),m2z/(1+zi),zi)*redshift_distribution(zi)*dz/((1+zi)**2)/(m1z/(1+zi)) for zi in z])
+    #p = np.array([mass_distribution_PL(m1z/(1+zi),zi)/(m_max-m_min)*redshift_distribution(zi)*dz/((1+zi)**2) for zi in z])
     m1 = m1z/(1+z)
     m2 = m2z/(1+z)
     p[m1 < m_min] = 0
@@ -149,10 +170,12 @@ for m1zi,m2zi in tqdm(grid, total = len(grid), desc = 'Power law'):
     else:
         f_m.append(0)
 
+norm = np.sum(f_m)*(m[1]-m[0])**2 /2
 f_m = np.reshape(f_m, n_pts)
-interp = RegularGridInterpolator((m,m), f_m, bounds_error=False, fill_value=0)
 
-with open('./PL_pdfv2.pkl', 'wb') as file:
+interp = RegularGridInterpolator((m,m), f_m/norm, bounds_error=False, fill_value=0)
+print(norm)
+with open('../result/pop_prior/PL_pdfv3.pkl', 'wb') as file:
     dill.dump(interp, file)
 
 probs = np.array([f_m.sum(axis = tuple(dims))*np.prod([dgrid[k] for k in dims])]).reshape(m.shape)

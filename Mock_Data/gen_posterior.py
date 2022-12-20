@@ -9,15 +9,10 @@ import dill
 np.random.seed(0)
 # Here come all the definitions used in this script
 ###########################################################################################################
-
-
 """ 
 Here, we generate the mass posterior by following the procedure in 
 Appendix A of https://iopscience.iop.org/article/10.3847/2041-8213/ab77c9/pdf 
 """
-
-
-
 t0 = time.time
 
 parser = argparse.ArgumentParser(description='Generate population and posterior samples.')
@@ -28,11 +23,6 @@ args = parser.parse_args()
 file = Path(args.file)
 Npos = int(args.Npos) # nunber of posterior samples per event
 snr_file =  Path("./snr/snr_m1m2z.pkl").resolve()
-if args.L:
-    Path('./catalog/m1m2z_posterior_PPD_afterSelection_'+str(m1.size)+'_lensed.npz')
-else:
-    Path('./catalog/m1m2z_posterior_PPD_afterSelection_'+str(m1.size)+'_unlensed.npz')
-
 ################# Uncertainty parameters ##################
 SNR_threshold  = 8
 sigma_mass     = 0.08  * SNR_threshold
@@ -126,4 +116,10 @@ for i in tqdm(range(0,Mz.size), desc = 'Posteriors'):
 """
 Warning: the 'redshift' entry does not match with 'z_posterior' since the latter is computed from the luminosity distance (which is affected by the presence of the lens).
 """
+if args.L:
+    output_file=Path('./catalog/m1m2z_posterior_PPD_afterSelection_'+str(m1.size)+'_lensed.npz')
+else:
+    output_file=Path('./catalog/m1m2z_posterior_PPD_afterSelection_'+str(m1.size)+'_unlensed.npz')
+
+
 np.savez(output_file, m1=m1, m2=m2, redshift=redshift, m1_posterior = m1_posterior, m2_posterior = m2_posterior, z_posterior = z_posterior)

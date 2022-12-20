@@ -20,12 +20,7 @@ mpl.rcParams['text.latex.preamble'] = ''.join([r'\usepackage[T1]{fontenc}'
                                            r'\usepackage{cmbright}'])
 
 math_blu = '$\log \mathcal{B}_{\mathcal{H}_{\mathrm{U}}}^{\mathcal{H}_{\mathrm{L}}}$'
-"""
-def marginalise(draws, dims, dgrid):
-    marg = draws
-    marg = np.array([m.sum(axis = tuple(dims))*np.prod([dgrid[k] for k in dims]) for m in marg])
-    return marg
-"""
+
 def plot_multidim_regular(axs, draws, dim, sample_dist = None, labels = None, units = None, 
                   true_value = None, figsize = 7, levels = [0.5, 0.68, 0.9],
                   real_dist = False, PL_dist = False, uni_dist = False, HDPGMM_model = False, plt_lim = None):
@@ -120,8 +115,6 @@ def plot_multidim_regular(axs, draws, dim, sample_dist = None, labels = None, un
     ax.set_xticks(ticks)
     ax.tick_params(axis='both', which='major', labelsize=18)
     ax.legend()
-   
-
 
 def plot_multidim(axs, draws, dim, sample_dist = None, labels = None, units = None, 
                   true_value = None, figsize = 7, levels = [0.5, 0.68, 0.9],
@@ -155,11 +148,14 @@ def plot_multidim(axs, draws, dim, sample_dist = None, labels = None, units = No
     dims = list(np.arange(dim, dtype = int))
     dims.remove(column)
     grid  = np.zeros(shape = (np.prod(n_pts), 3))
-
+    
+    
     for i, m1i in enumerate(m):
         for j, qi in enumerate(q):
                 for l, xi in enumerate(chieff):
                     grid[i*(n_pts[1]*n_pts[2]) + j*n_pts[2] + l] = [m1i, m1i*qi, xi]
+    #jacob = grid[:,0]**2
+    #jacob = np.reshape(jacob,n_pts)
     if HDPGMM_model: 
  
         astro_dists = np.array([(d.pdf(grid).reshape(n_pts)) for d in tqdm(draws, total = len(draws), desc = 'Astro Dists')])
@@ -187,12 +183,13 @@ def plot_multidim(axs, draws, dim, sample_dist = None, labels = None, units = No
 
     norm = probs.sum()*dgrid[0]
     ax.plot(m, probs/norm, lw = 1.5, color='black', label='Benchmajr')
-    
+    print(norm)
     if PL_dist:
         probs = sample_dist[1](grid).reshape(n_pts)
         probs[np.isnan(probs)] =0
         probs = np.array([probs.sum(axis = tuple(dims))*np.prod([dgrid[k] for k in dims])]).reshape(m.shape)
         norm = probs.sum()*dgrid[0]
+        print(norm)
         ax.plot(m, probs/norm, lw = 1.5, color='orange', label='PL prior')
     elif uni_dist:
         probs = np.ones(n_pts[0]) / (m[-1]-m[0])
@@ -333,7 +330,12 @@ def plotting_two(data1,data2, pop_model, true_samples, wrong_samples,
         plt.errorbar(m1,data2[:,0], data2[:,1],solid_capstyle='projecting',color='darkturquoise',
                      capsize=4,fmt='o',label=r'$\mathrm{(H)DPGMM}$')
 
-    plot_multidim(axes[0], pop_model, 3, sample_dist = (true_samples, wrong_samples),
+    if reg:
+        plot_multidim(axes[0], pop_model, 3, sample_dist = (true_samples, wrong_samples),
+                  real_dist=real_dist,PL_dist=PL_dist,uni_dist=uni_dist,HDPGMM_model=HDPGMM_model,
+                 plt_lim=xlim)
+    else:
+        plot_multidim_regular(axes[0], pop_model, 3, sample_dist = (true_samples, wrong_samples),
                   real_dist=real_dist,PL_dist=PL_dist,uni_dist=uni_dist,HDPGMM_model=HDPGMM_model,
                  plt_lim=xlim)
     if scale_log:

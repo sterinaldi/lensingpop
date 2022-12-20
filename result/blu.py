@@ -2,11 +2,11 @@ import numpy as np
 from figaro.exceptions import FIGAROException
 import dill
 import sys
-data_dir = './Mock_data'
+data_dir = '../Mock_data'
 sys.path.insert(0, data_dir)
 from simulated_universe import *
 from xeff_pop import *
-
+import matplotlib.pyplot as plt
 class mix_pop():
     def __init__(self,file,wide=False):
         with open(file, 'rb') as f: self.pop_pdf = dill.load(f)
@@ -85,7 +85,8 @@ class OddsRatio():
         A = self.Overlap_integral(event1,event2,population, n_draws=self.Nmc,error=self.error)
         B = self.MC_integral(event1, population, n_draws=self.Nmc,error=self.error)
         C = self.MC_integral(event2, population, n_draws=self.Nmc,error=self.error)
-#        print('x',A,B,C)
+        #print('BLU=',A[0],B[0],C[0])
+        #print('BLU error=',A[1],B[1],C[1])        
         if self.error:
             dA, dB, dC = A[1], B[1], C[1]
             A, B, C = A[0], B[0], C[0]
@@ -115,8 +116,8 @@ class OddsRatio():
             :double: uncertainty (if error = True)
         """
         # Check that both p and q are iterables or callables:
-        if not ((hasattr(p, 'pdf') or np.iterable(p)) and (hasattr(q, 'rvs') or np.iterable(q))):
-            raise FIGAROException("p and q must be list of callables or having pdf/rvs methods")
+#        if not ((hasattr(p, 'pdf') or np.iterable(p)) and (hasattr(q, 'rvs') or np.iterable(q))):
+#            raise FIGAROException("p and q must be list of callables or having pdf/rvs methods")
         # Number of p draws and methods check
         if np.iterable(p):
             #if not np.alltrue([hasattr(pi, 'pdf') for pi in p]):
@@ -149,14 +150,20 @@ class OddsRatio():
             probabilities[np.isnan(probabilities)] = 0
         else:
             probabilities = np.atleast_2d(q.pdf(p.rvs(n_draws)))
-            probabilities[np.isnan(probabilities)] = 0
+            #print(probabilities)
+#            plt.hist(probabilities.flatten(),bins=int(np.sqrt(n_draws)),histtype='step')
+#            plt.show()
+#            probabilities[np.isnan(probabilities)] = 0
+            
         means = probabilities.mean(axis = 1)
+        #print(means)
         I = means.mean()
+        #print('MC I=',I)
         if not error:
             return I
         mc_error = (probabilities.var(axis = 1)/n_draws).mean()
         figaro_error = means.var()/len(means)
-
+        #print('MC sq error=', np.sqrt(mc_error), np.sqrt(figaro_error))
         return I, np.sqrt(mc_error + figaro_error)
 
 
@@ -204,10 +211,13 @@ class OddsRatio():
             probabilities[np.isnan(probabilities)] = 0
         means = probabilities.mean(axis = 1)
         I = means.mean()
+        #print('OVERLAP I=',I)
+        
         if not error:
             return I
         mc_error = (probabilities.var(axis = 1)/n_draws).mean()
         figaro_error = means.var()/len(means)
+        #print('OVERLAP sq error=', np.sqrt(mc_error), np.sqrt(figaro_error))
         return I, np.sqrt(mc_error + figaro_error)
 
     

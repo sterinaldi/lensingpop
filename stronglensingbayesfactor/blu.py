@@ -7,7 +7,6 @@ from matplotlib import rcParams
 from matplotlib import axes
 
 
-
 """
 Here is the example of using this class.
 
@@ -17,8 +16,6 @@ import numpy as np
 from blu import *
 import dill 
 from simulated_universe import *
-
-
 
 # Inferred HDPGMM model from observations
 with open('/Users/damon/Desktop/blu_upload/git_download/hier/test_output/posteriors_hier.pkl', 'rb') as f:
