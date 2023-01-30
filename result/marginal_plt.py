@@ -18,7 +18,7 @@ mpl.rcParams['text.usetex'] = True
 mpl.rcParams['text.latex.preamble'] = ''.join([r'\usepackage[T1]{fontenc}'
                                            r'\usepackage{cmbright}'])
 
-def plot_multidim(ax, draws, dim, sample_dist = None, label = None, color = 'blue', 
+def marginal_plot(column,ax, draws, dim, sample_dist = None, label = None, color = 'blue', 
                   figsize = 7, levels = [0.5, 0.68, 0.9], n_pts  = np.array([100,100,70]), 
                   xlim = None,ticks = [20,50,80,110,140]):
 
@@ -26,7 +26,6 @@ def plot_multidim(ax, draws, dim, sample_dist = None, label = None, color = 'blu
         label = ['$x_{0}$'.format(i+1) for i in range(dim)]
 
         
-    column = 0
     levels = np.atleast_1d(levels)
     z_bds  = [0.2,1.3]
     mlim = [15*(1+z_bds[0]), 98*(1+z_bds[1])]
@@ -100,10 +99,10 @@ def plot_multidim(ax, draws, dim, sample_dist = None, label = None, color = 'blu
     ax.xaxis.set_minor_locator(MultipleLocator(5)) 
     ax.set_xticks(ticks)
     ax.tick_params(axis='both', which='major', labelsize=18)
-    ax.legend()
+    ax.legend(fontsize=18)
     
 def plotting_two(m1,d1,d2, model, true_model, color, label, 
-                  xlabel, xlim=None, ylim=None, yscale='log',ticks = [20,40,60,80,100,120,140,160,180,200,220,240]):
+                  ylabel, xlim=None, ylim=None, yscale='log',ticks = [20,40,60,80,100,120,140,160,180,200,220,240]):
     
     fig, axes = plt.subplots(nrows=2, sharex=True,
                              figsize=(8,8),gridspec_kw={'height_ratios': [1, 3]})
@@ -117,10 +116,10 @@ def plotting_two(m1,d1,d2, model, true_model, color, label,
     axes[1].errorbar(m1,d2[:,0], d2[:,1],solid_capstyle='projecting',color=color,
                  capsize=0,fmt='o',elinewidth=5,label=label)
     print('Nmodel=',len(model))
-    plot_multidim(axes[0], model, 3, true_model, label=label, color=color, xlim=xlim,ticks=ticks)
+    marginal_plot(0,axes[0], model, 3, true_model, label=label, color=color, xlim=xlim,ticks=ticks)
     
     ax = axes[1]
-    ax.set_ylabel(r''+xlabel,fontsize=20)
+    ax.set_ylabel(r''+ylabel,fontsize=20)
     ax.set_xlabel(r'$m_1^z [M_{\odot}]$',fontsize=20)
     ax.set_ylim(ylim[0],ylim[1])
     ax.xaxis.set_minor_locator(MultipleLocator(5)) 
@@ -129,7 +128,7 @@ def plotting_two(m1,d1,d2, model, true_model, color, label,
     plt.yscale(yscale)
     plt.grid(True)
     plt.tick_params(axis='both', which='major', labelsize=18)
-    plt.legend(loc=4)
+    plt.legend(loc=4,fontsize=18)
     return fig, ax
 
     
