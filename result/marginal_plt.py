@@ -51,7 +51,7 @@ def marginal_plot(column,ax, draws, dim, sample_dist = None, label = None, color
     probs = sample_dist(grid).reshape(n_pts)
     #probs[np.isnan(probs)] = 0
     probs = np.array([probs.sum(axis = tuple(dims))*np.prod([dgrid[k] for k in dims])]).reshape(m.shape)
-    norm = probs.sum()*dgrid[0]
+    norm = probs.sum()*dgrid[column]
     ax.plot(m, probs/norm, lw = 1.5, color='black', label=r'$\mathrm{Benchmark}$')
     if np.iterable(draws): 
         # grid
