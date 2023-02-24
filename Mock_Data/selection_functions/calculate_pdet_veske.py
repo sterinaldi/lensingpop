@@ -83,18 +83,18 @@ def c(i,j):#compute the detection probability with the HLV network at O3 sensiti
     return 1-norm(loc = numpy.sqrt(numpy.sum((1000**2*numpy.outer((1+z)**al[int(numpy.round(100*j/i))-1]/r**2,(o3l[i,j]*anl+o3h[i,j]*anh+o3v[i,j]*anv)))/(n**4), axis = -1))).cdf(8)
 
 
-
+m1 = numpy.linspace(5,99,100)
+q  = numpy.linspace(0.1,1,100)
 if not postprocess:
-    for j in tqdm(range(5,100)): #Consider small mass between [5,99] solar masses, in accordance with the SNR code
-        for i in range (j,min(100,10*j+1)): #Consider heavy mass between [m2,min(99,10*m2)] solar masses, in accordance with the SNR code
-            pdet[i,j]=c(i,j)
+    for qi in tqdm(q): #Consider small mass between [5,99] solar masses, in accordance with the SNR code
+        for m1i in m1: #Consider heavy mass between [m2,min(99,10*m2)] solar masses, in accordance with the SNR code
+            pdet[i,j]=c(int(m1i),int(qi*m1i))
     print((time.time()-t)//60)#print elapsed time
-    numpy.save('hlvo3.npy',pdet) #name of the file containing the detection probability given m1,m2,z
+    numpy.save('hlvo3_m1q_source.npy',pdet) #name of the file containing the detection probability given m1,m2,z
 
 else:
-    pdet = numpy.load('hlvo3.npy')
+    pdet = numpy.load('hlvo3_m1q_source.npy')
 
-m = numpy.arange(0, 100)
-interp = RegularGridInterpolator(points = (m, m, z), values = pdet, method = 'linear', bounds_error = False, fill_value = 0.)
-with open('selfunc_m1m2z_source.pkl', 'wb') as f:
+interp = RegularGridInterpolator(points = (m1, q, z), values = pdet, method = 'linear', bounds_error = False, fill_value = 0.)
+with open('selfunc_m1qz_source.pkl', 'wb') as f:
     dill.dump(interp, f)
