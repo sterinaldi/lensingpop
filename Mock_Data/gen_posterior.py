@@ -28,6 +28,7 @@ SNR_threshold  = 8
 sigma_mass     = 0.08  * SNR_threshold
 sigma_symratio = 0.022 * SNR_threshold
 sigma_theta    = 0.21  * SNR_threshold
+sigma_q        = 1.0671
 
 def TruncNormSampler(clip_a, clip_b, mean, std, Nsamples):
     a, b = (clip_a - mean) / std, (clip_b - mean) / std
@@ -35,11 +36,13 @@ def TruncNormSampler(clip_a, clip_b, mean, std, Nsamples):
 
 ### function to generate measurement uncertainty ##### 
 
-def measurement_uncertainty(Mc_z, smr, dl, z, snr_opt, snr_obs, N = 1000):
+def measurement_uncertainty(Mc_z, mr, dl, z, snr_opt, snr_obs, N = 1000):
     Mc_center = Mc_z * np.exp( np.random.normal(0, sigma_mass / snr_obs, 1) )
     Mc_obs = Mc_center * np.exp( np.random.normal(0, sigma_mass / snr_obs, N) )
    ################## generate symmetry ratio noise by using truncated normal distribution ##################
-    symratio_obs = TruncNormSampler( 0.0, 0.25, smr, sigma_symratio / snr_obs, N)
+    mr_center = 1./(1+np.exp(-np.random.normal(loc = np.log(mr/(1-mr)), scale = sigma_q, size = n_out)))
+    ratio_obs = 1./(1+np.exp(-np.random.normal(loc = np.log(mr_center/(1-mr_center)), scale = sigma_q, size = n_out)))
+    symratio_obs = ratio_obs/(1+ratio_obs)**2
 
     ################## compute redshifted m1 and m2 ##################
     M = Mc_obs / symratio_obs ** (3./5.)
@@ -54,7 +57,8 @@ def measurement_uncertainty(Mc_z, smr, dl, z, snr_opt, snr_obs, N = 1000):
         if not n_out>0: break
         Mc_obs = Mc_center * np.exp( np.random.normal(0, sigma_mass / snr_obs, n_out) )
    ################## generate symmetry ratio noise by using truncated normal distribution ##################
-        symratio_obs = TruncNormSampler( 0.0, 0.25, smr, sigma_symratio / snr_obs, n_out)
+        ratio_obs = 1./(1+np.exp(-np.random.normal(loc = np.log(mr_center/(1-mr_center)), scale = sigma_q, size = n_out)))
+        symratio_obs = ratio_obs/(1+ratio_obs)**2
 
     ################## compute redshifted m1 and m2 ##################
         M = Mc_obs / symratio_obs ** (3./5.)
@@ -101,7 +105,7 @@ for ii in range(snr.size):
 
 ################## Compute chrip mass and symmetry ratio ##################
 Mz             = (1+redshift) * (m1*m2)**(3./5.) / (m1+m2)**(1./5.)
-sym_mass_ratio = (m1*m2)  / (m1+m2)** 2  
+mass_ratio     = m2/m1
 
 
 ################## generate posterior sample for m1 and m2 ##################
@@ -110,7 +114,7 @@ m2_posterior = np.zeros((Mz.size,Npos))
 z_posterior = np.zeros((Mz.size,Npos))
 
 for i in tqdm(range(0,Mz.size), desc = 'Posteriors'):
-    m1_posterior[i], m2_posterior[i], z_posterior[i] = measurement_uncertainty(Mz[i], sym_mass_ratio[i], dl[i], redshift[i], snr[i], snr_obs[i], Npos)
+    m1_posterior[i], m2_posterior[i], z_posterior[i] = measurement_uncertainty(Mz[i], mass_ratio[i], dl[i], redshift[i], snr[i], snr_obs[i], Npos)
 #print(time.time()-t0)
 ################## Save the posterior ##################
 """
