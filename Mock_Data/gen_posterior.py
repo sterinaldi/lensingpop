@@ -40,9 +40,10 @@ def measurement_uncertainty(Mc_z, mr, dl, z, snr_opt, snr_obs, N = 1000):
     Mc_center = Mc_z * np.exp( np.random.normal(0, sigma_mass / snr_obs, 1) )
     Mc_obs = Mc_center * np.exp( np.random.normal(0, sigma_mass / snr_obs, N) )
    ################## generate symmetry ratio noise by using truncated normal distribution ##################
-    mr_center = 1./(1+np.exp(-np.random.normal(loc = np.log(mr/(1-mr)), scale = sigma_q, size = n_out)))
-    ratio_obs = 1./(1+np.exp(-np.random.normal(loc = np.log(mr_center/(1-mr_center)), scale = sigma_q, size = n_out)))
+    mr_center = 1./(1+np.exp(-np.random.normal(loc = np.log(mr/(1-mr)), scale = sigma_q, size = 1)))
+    ratio_obs = 1./(1+np.exp(-np.random.normal(loc = np.log(mr_center/(1-mr_center)), scale = sigma_q, size = N)))
     symratio_obs = ratio_obs/(1+ratio_obs)**2
+#    print(Mc_z)
 
     ################## compute redshifted m1 and m2 ##################
     M = Mc_obs / symratio_obs ** (3./5.)
