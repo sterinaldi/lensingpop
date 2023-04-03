@@ -100,19 +100,22 @@ snr = data['snr']
 #q= m2/m1
 #print(q[1/q>6.5])
 
+
+################## Generate Gaussian noise for SNR ##################
+snr_obs = np.zeros(snr.shape)
+for ii in range(snr.size):
+    snr_obs[ii] = snr[ii] + TruncNormSampler( -np.inf,np.inf, 0.0, 1.0, 1)
+
+    
+    
 ################## Filter the event with mass ratio m1/m2 >10.0 ################################
-index = np.where((m1/m2<=10))[0]
+index = np.where(snr_obs>=8)[0]
 m1 = m1[index]
 m2 = m2[index]
 redshift = redshift[index]
 dl = dl[index]
 snr = snr[index]
 del data
-################## Generate Gaussian noise for SNR ##################
-snr_obs = np.zeros(snr.shape)
-for ii in range(snr.size):
-    snr_obs[ii] = snr[ii] + TruncNormSampler( -snr[ii],np.inf, 0.0, 1.0, 1)
-
 ################## Compute chrip mass and symmetry ratio ##################
 Mz             = (1+redshift) * (m1*m2)**(3./5.) / (m1+m2)**(1./5.)
 mass_ratio     = m2/m1
