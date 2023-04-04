@@ -104,7 +104,9 @@ snr = data['snr']
 ################## Generate Gaussian noise for SNR ##################
 snr_obs = np.zeros(snr.shape)
 for ii in range(snr.size):
-    snr_obs[ii] = snr[ii] + TruncNormSampler( -np.inf,np.inf, 0.0, 1.0, 1)
+    snr_obs[ii] = snr[ii] + np.random.normal( loc= 0.0, scale = 1.0, size = 1)
+#    snr_obs[ii] = snr[ii] + TruncNormSampler( -np.inf,np.inf, 0.0, 1.0, 1)
+
 
     
     
