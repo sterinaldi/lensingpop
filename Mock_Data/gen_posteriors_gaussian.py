@@ -4,10 +4,10 @@ from pathlib import Path
 from tqdm import tqdm
 
 # Sigma values
-sigma_mass     = 0.08
-sigma_z        = 0.022
+sigma_mass     = 0.088
+sigma_z        = 0.3
 sigma_q        = 1.0671
-sigma_s        = 0.8
+sigma_s        = 0.4
 
 def transf(x, l, h):
     """
