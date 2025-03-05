@@ -7,7 +7,7 @@
 # cleaning up
 result/
 workflow/
-
+o3data/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
