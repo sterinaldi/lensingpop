@@ -1,8 +1,6 @@
 # lensingpop
 
-Please install the module by running `python setup.py install`.
-In case of `ModuleNotFoundError: No module named 'lensingpop'`, run `python setup.py build_ext --inplace`.
-
+Please install the module by running `python -m pip install .`.
 
 # Paper:
 - Injections
@@ -16,6 +14,3 @@ In case of `ModuleNotFoundError: No module named 'lensingpop'`, run `python setu
 - Bayes factor
  * Compute Bayes factors using (a) population inference results (b) posterior results
 - Use the results to generate figures
-
-
-
