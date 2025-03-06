@@ -147,6 +147,14 @@ out_name = 'powerlaw_m1z'
 interpolators = [funInterpolator((m1,), d) for d in dists]
 with open(out_folder+out_name+'.pkl', 'wb') as f:
     dill.dump(interpolators, f)
+
+prob_1d = [np.sum(p, axis=0)*dgrid[0] for p in prob]
+dists = [a / np.sum(a*dgrid[1]) for a in prob_1d]
+    
+out_name = 'powerlaw_q'
+interpolators = [funInterpolator((m1,), d) for d in dists]
+with open(out_folder+out_name+'.pkl', 'wb') as f:
+    dill.dump(interpolators, f)
     
 # Compute and print power-law indices
 x = np.median(flat_samples[:, 0])
@@ -176,6 +184,12 @@ with open(out_folder+'uni_m1zq.pkl', 'wb') as f:
 vol = m1_bds[1] - m1_bds[0]
 uni_pop = UniDist(vol=vol)
 with open(out_folder+'uni_m1z.pkl', 'wb') as f:
+    dill.dump(uni_pop, f)
+
+
+vol = q_bds[1] - q_bds[0]
+uni_pop = UniDist(vol=vol)
+with open(out_folder+'uni_q.pkl', 'wb') as f:
     dill.dump(uni_pop, f)
 
 vol = 120 - 5

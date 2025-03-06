@@ -51,8 +51,8 @@ def main():
     unlensed_file = './catalog/m1zq_posterior_afterSelection_unlensed1519.npz'
 
     # Output folders
-    lensed_output_folder = './lensed_events/'
-    unlensed_output_folder = './unlensed_events/'
+    lensed_output_folder = './prior/lensed_events/'
+    unlensed_output_folder = './prior/unlensed_events/'
 
     # Process lensed and unlensed populations
     process_population(lensed_file, lensed_output_folder, is_lensed=True)
